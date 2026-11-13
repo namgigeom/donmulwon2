@@ -145,3 +145,11 @@
 - 작업: `web/src/App.tsx`의 사용하지 않는 아이콘 import 제거
 - 목적: TypeScript의 `noUnusedLocals` 설정에서 발생할 수 있는 컴파일 오류 예방
 - 검증: 코드 수준의 미사용 import 1건을 제거했다. 실제 `npm install` 및 `npm run build`는 아직 실행하지 않았다.
+
+
+## 1. 웹 프론트엔드 골격 구축 — 개발 환경 정리
+
+- 날짜: 2026-11-14
+- 작업: `.gitignore` 갱신
+- 변경: `web/node_modules/`, `web/dist/`, `web/.vite/`를 추가해 프론트엔드 의존성과 빌드 산출물이 Git에 포함되지 않도록 했다.
+- 검증: 기존 Python 환경 제외 규칙을 유지한 상태로 웹 전용 제외 규칙을 추가했다.
