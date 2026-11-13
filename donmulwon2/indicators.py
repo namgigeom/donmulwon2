@@ -18,9 +18,9 @@ def calculate_indicators(frame: pd.DataFrame) -> pd.DataFrame:
         loss = -delta.clip(upper=0)
         avg_gain = gain.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
         avg_loss = loss.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
-        rs = avg_gain / avg_loss.replace(0, pd.NA)
+        rs = avg_gain / avg_loss.where(avg_loss.ne(0))
         result = 100 - (100 / (1 + rs))
-        return result.fillna(100).where(avg_loss.eq(0), result)
+        return result.where(avg_loss.ne(0), 100)
 
     df["RSI10"] = rsi(10)
     df["RSI14"] = rsi(14)
