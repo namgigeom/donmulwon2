@@ -217,6 +217,7 @@ class Dashboard(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._animate)
         self.timer.start(1000)
+        QTimer.singleShot(700, self._refresh_market)
 
     def _build_panels(self):
         self.market_panel = Panel("MARKET BULLETIN  /  KRX")
@@ -393,7 +394,7 @@ class Dashboard(QWidget):
 
     def _on_progress(self, current, total, ticker):
         self.scan_progress.setValue(int(current / max(total, 1) * 100))
-        self.scan_status.setText(f"KOSPI 전 종목 검사 중: {current:,}/{total:,} · {ticker}")
+        self.scan_status.setText(f"{self.market_selector.currentText()} 전 종목 검사 중: {current:,}/{total:,} · {ticker}")
 
     def _on_worker_finished(self, data):
         self.footer_status.setText("● KRX DATA RECEIVED")
@@ -470,7 +471,10 @@ class Dashboard(QWidget):
             f'{data["date"]} · {data["market"]} {data["scanned"]:,}종목 검사 · '
             f'조건 충족 {len(matches)}종목 · 오류 {data["error_count"]}건'
         )
-        self.scan_hint.setText("행을 선택하면 종목코드로 상세 분석을 다시 요청합니다.")
+        if not matches:
+            self.scan_hint.setText("현재 거래일 기준 세 가지 조건을 모두 만족한 종목이 없습니다.")
+        else:
+            self.scan_hint.setText("행을 선택하면 해당 종목의 상세 분석을 불러옵니다.")
 
     def _select_scan_row(self, row, column):
         item = self.scan_table.item(row, 0)
