@@ -43,9 +43,13 @@ class AnalysisWorker(QObject):
                             last = index_result.data.iloc[-1]
                             item["index_close"] = _safe_float(last.get("종가"))
                             item["index_change"] = _safe_float(last.get("등락률"))
+                            item["index_history"] = [
+                                _safe_float(value) for value in index_result.data["종가"].tail(10).tolist()
+                            ]
                         else:
                             item["index_close"] = None
                             item["index_change"] = None
+                            item["index_history"] = []
                         item["stale"] = False
                         analyzer.store.save_bulletin(item["date"], market, item)
                         markets[market] = item
