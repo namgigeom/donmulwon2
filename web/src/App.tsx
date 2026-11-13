@@ -62,6 +62,7 @@ function formatTradingValue(value: number | undefined) {
 }
 
 function App() {
+  const [chartPeriod, setChartPeriod] = useState<"daily" | "weekly">("daily");
   const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
 
@@ -243,11 +244,11 @@ function App() {
               <article className="panel chart-panel">
                 <div className="section-heading compact">
                   <div><span className="section-kicker">TECHNICAL ANALYSIS DESK</span><h2>차트 분석 모니터</h2></div>
-                  <span className="period-select">주봉 · 일봉 <ChevronDown size={13} /></span>
+                  <div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div>
                 </div>
                 <div className="chart-empty">
                   <div className="chart-grid-lines"><i /><i /><i /><i /></div>
-                  <div className="chart-empty-content"><CandlestickChart size={25} /><b>분석 종목 선택 대기</b><span>주봉으로 큰 추세를, 일봉으로 스윙 후보를 확인합니다.</span></div>
+                  <div className="chart-empty-content"><CandlestickChart size={25} /><b>분석 종목 선택 대기</b><span>{chartPeriod === "weekly" ? "주봉으로 큰 추세를 확인합니다." : "일봉으로 스윙 후보와 진입 흐름을 확인합니다."}</span></div>
                 </div>
                 <div className="sector-watch-grid">
                   <section className="sector-watch-card">
