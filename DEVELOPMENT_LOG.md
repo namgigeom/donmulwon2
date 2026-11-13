@@ -429,3 +429,5 @@
 - 데이터 원칙: null·미수신 데이터는 추측하지 않도록 지시한다. AI 키 누락, 시장 데이터 부족, AI 오류 시 기존 문구를 재탕하지 않고 오류/대기 상태를 표시한다.
 - 설정: 로컬 `.env`의 `OPENROUTER_API_KEY` 및 선택 설정 `OPENROUTER_MODEL`을 사용한다. 기본 모델은 `google/gemini-2.5-flash`이며 환경변수로 변경 가능하다.
 - 검증: GitHub 코드 반영만 수행. 실제 OpenRouter 키로 생성, KRX 실데이터 응답, 로컬 FastAPI·브라우저 표시 및 CI는 별도 확인 필요. API 키는 저장소에 추가하지 않았다.
+
+- 추가 검증 코드: `tests/test_raccoon_ai.py`에서 시장 데이터 정리와 거래일별 캐시 저장을 테스트하도록 추가했다.
