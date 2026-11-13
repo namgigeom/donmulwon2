@@ -5,7 +5,7 @@ import pandas as pd
 
 
 def calculate_indicators(frame: pd.DataFrame) -> pd.DataFrame:
-    """Return a copy with RSI(10/14), MACD(5/10/9), MA10/20/60/120/240 and Bollinger bands."""
+    """Return a copy with RSI(10/14), MACD(5/10/9), MA10/20/60/120/240 and Bollinger Bands(10,2)."""
     if frame is None or frame.empty:
         return pd.DataFrame()
 
@@ -48,8 +48,8 @@ def calculate_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     df["LOW20"] = low.rolling(20, min_periods=20).min()
     df["HIGH252"] = high.rolling(252, min_periods=20).max()
 
-    mid = close.rolling(20, min_periods=20).mean()
-    std = close.rolling(20, min_periods=20).std(ddof=0)
+    mid = close.rolling(10, min_periods=10).mean()
+    std = close.rolling(10, min_periods=10).std(ddof=0)
     df["BB_UPPER"] = mid + 2 * std
     df["BB_MIDDLE"] = mid
     df["BB_LOWER"] = mid - 2 * std
