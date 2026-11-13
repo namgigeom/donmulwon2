@@ -64,6 +64,15 @@ class AnalysisStore:
                  json.dumps(payload, ensure_ascii=False)),
             )
 
+    def latest_bulletin(self, market: str):
+        with self._connect() as conn:
+            row = conn.execute(
+                """SELECT payload FROM market_bulletins
+                   WHERE market = ? ORDER BY trading_date DESC LIMIT 1""",
+                (market,),
+            ).fetchone()
+        return json.loads(row[0]) if row else None
+
     def recent_analyses(self, limit: int = 30):
         with self._connect() as conn:
             rows = conn.execute(
