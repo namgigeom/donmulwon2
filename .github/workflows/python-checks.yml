@@ -76,6 +76,7 @@ jobs:
           window = MainWindow()
           window.resize(1600, 900)
           window.show()
+          from PySide6.QtCore import QEventLoop, QTimer
           app.processEvents()
           screenshot = window.grab()
           assert not screenshot.isNull(), "Dashboard screenshot is empty"
@@ -84,11 +85,22 @@ jobs:
           assert dashboard.image.width() == 1672
           assert dashboard.image.height() == 941
           assert dashboard._to_canvas(10, 10) is not None
+          assert len(dashboard.character_frames) == 6, (
+              f"Expected six desk animation frames, got {len(dashboard.character_frames)}"
+          )
+          first_frame = dashboard.character_frame_index
+          loop = QEventLoop()
+          QTimer.singleShot(1000, loop.quit)
+          loop.exec()
+          assert dashboard.character_frame_index != first_frame, "Character animation timer did not advance"
+          second_screenshot = window.grab()
+          assert not second_screenshot.isNull(), "Animated dashboard screenshot is empty"
+          dashboard.character_timer.stop()
           dashboard.refresh_timer.stop()
           dashboard.clock.stop()
           window.close()
           app.processEvents()
-          print("Pixel-art canvas construction and paint OK", flush=True)
+          print("Pixel-art dashboard paint + Neoburi animation timer OK", flush=True)
           # pykrx currently triggers a C-extension finalizer abort on some Linux
           # runners; all GUI assertions have completed before this clean test exit.
           import os
