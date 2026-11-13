@@ -38,37 +38,6 @@ const marketNav: NavItem[] = [
   { label: "시장 현황", icon: BarChart3 },
 ];
 
-const raccoonDailyLines = [
-  "오늘은 급하게 뛰지 말고, 좋은 자리만 기다려보자너굴!",
-  "거래량이 따라오지 않는 상승은 한 번 더 의심해보자너굴.",
-  "240일선 아래에서는 아무리 반짝여도 일단 멈추는 거다너굴!",
-  "주봉 추세가 등을 밀어줄 때 움직여도 늦지 않다너굴.",
-  "손절 기준 없는 진입은 계획이 아니라 희망회로다너굴!",
-  "시장이 흔들릴수록 원칙은 더 단단하게 지키자너굴.",
-  "급등하는 꼬리를 쫓기보다 눌림 자리부터 살펴보자너굴!",
-  "좋은 종목도 가격이 나쁘면 좋은 매수가 아니다너굴.",
-  "RSI와 MACD가 함께 돌아서는지 차분히 확인하자너굴!",
-  "수익을 지키는 것도 다음 기회를 잡는 실력이다너굴.",
-  "A등급이라도 진입 가격과 손절선은 꼭 확인하자너굴!",
-  "거래대금이 붙는 종목에 시장의 시선이 모이는 법이다너굴.",
-  "횡보장에서는 매매 횟수보다 기다리는 힘이 중요하다너굴.",
-  "손실을 작게 끊어야 다음 기회도 살아남는다너굴!",
-  "하루 반등보다 주봉의 방향이 더 많은 걸 말해준다너굴.",
-  "신호가 하나라도 빠졌다면 서두를 이유가 없다너굴.",
-  "시장은 예측보다 대응, 느낌보다 데이터다너굴!",
-  "익절은 욕심이 아니라 미리 세운 계획대로 하자너굴.",
-  "지수가 강해도 모든 종목이 강한 건 아니다너굴.",
-  "오늘 놓친 종목은 보내주자, 기회는 또 온다너굴!",
-  "높이 오른 종목일수록 추격보다 위험부터 계산하자너굴.",
-  "주도 업종과 거래량이 함께 움직이는지 살펴보자너굴.",
-  "C등급은 보류, 현금도 훌륭한 포지션이다너굴!",
-  "확신이 부족하면 매수하지 않는 것도 분석의 결과다너굴!"
-];
-
-function getDailyRaccoonLine(date = new Date()): string {
-  const dayNumber = Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
-  return raccoonDailyLines[((dayNumber % raccoonDailyLines.length) + raccoonDailyLines.length) % raccoonDailyLines.length];
-}
 
 type MarketBulletin = {
   date: string;
@@ -239,6 +208,7 @@ function App() {
   const apiBase = "http://" + window.location.hostname + ":8000";
   const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
+  const [raccoonNote, setRaccoonNote] = useState<{status:"loading"|"ready"|"error";trading_date?:string;note?:string;model?:string;error?:string}>({status:"loading"});
   const [scanMarket, setScanMarket] = useState<MarketCode>("ALL");
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState("");
@@ -310,6 +280,19 @@ function App() {
           if (result.status === "fulfilled") next[result.value[0]] = result.value[1] as MarketBulletin;
         });
         setMarketData(next);
+        if (Object.keys(next).length === 2) {
+          try {
+            const noteResponse = await fetch(apiBase + "/api/market/raccoon-note", { signal: controller.signal });
+            const notePayload = await noteResponse.json();
+            if (!noteResponse.ok) throw new Error(notePayload.detail || "AI 시장 분석을 불러오지 못했습니다.");
+            setRaccoonNote({ ...notePayload, status: "ready" });
+          } catch (noteError) {
+            if (noteError instanceof Error && noteError.name === "AbortError") return;
+            setRaccoonNote({ status: "error", error: noteError instanceof Error ? noteError.message : "AI 시장 분석 실패" });
+          }
+        } else {
+          setRaccoonNote({ status: "error", error: "코스피·코스닥 시장 데이터가 모두 필요합니다." });
+        }
         if (Object.keys(next).length === 0) setApiStatus("KRX 데이터 미수신");
         else if (Object.keys(next).length < 2) setApiStatus("일부 시장 데이터 미수신");
       } catch (error) {
@@ -576,9 +559,9 @@ function App() {
                 <div className="analyst-avatar">🦝</div>
                 <div><b>수석 기술·시장 애널리스트</b><small>DONMULWON RESEARCH</small></div>
               </div>
-              <div className="raccoon-note-label">TODAY'S RACCOON NOTE · 오늘의 너구리 한마디</div>
-              <p className="analyst-message">“{getDailyRaccoonLine()}”</p>
-              <div className="analyst-footer"><span><i /> 대기 중</span><span>OPENROUTER 연결 예정</span></div>
+              <div className="raccoon-note-label">TODAY'S MARKET ANALYSIS · 당일 시장 분석</div>
+              <p className="analyst-message">{raccoonNote.status === "ready" ? raccoonNote.note : raccoonNote.status === "loading" ? "당일 시장 데이터를 바탕으로 오늘의 대응 전략을 분석하고 있습니다너굴." : (raccoonNote.error || "시장 분석을 생성할 수 없습니다.")}</p>
+              <div className="analyst-footer"><span><i /> {raccoonNote.status === "ready" ? `시장 기준일 ${raccoonNote.trading_date ?? ""}` : raccoonNote.status === "loading" ? "AI 분석 중" : "분석 대기"}</span><span>{raccoonNote.model ?? "OPENROUTER AI"}</span></div>
             </article>
             <article className="panel signal-panel">
               <div className="section-heading compact">
