@@ -195,6 +195,7 @@ class Dashboard(QWidget):
         p.translate(ox, oy)
         p.scale(self._scale, self._scale)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing, False)
         self._paint_top(p)
         self._paint_bulletin(p)
         self._paint_checklist(p)
