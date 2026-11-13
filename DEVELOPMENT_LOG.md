@@ -351,3 +351,10 @@
 - 변경: pykrx 의존성 최소 버전을 인증 설정을 포함한 `1.1.3.dev0` 이상으로 상향했다. `.env.example`에 KRX_ID/KRX_PW 항목을 추가하고, 인증정보가 없을 때 JSON 파싱 오류가 발생하면 사용자가 취할 조치를 API 오류 메시지에 표시한다. README에 로컬 .env 설정 및 비밀값 보호 절차를 기록했다.
 - 테스트: KRX 인증정보 누락 시 오류 안내가 반환되는 네트워크 없는 회귀 테스트를 추가했다. 기존 name_display=False 테스트도 유지한다.
 - 검증: GitHub 반영 완료. GitHub Actions 및 사용자 PC에서 KRX 인증 후 실데이터 연결은 별도 확인 필요. KRX 계정 없이 KRX 데이터가 복구됐다고 간주하지 않는다.
+
+
+## 19. Windows 런처의 pykrx 인증 지원 버전 확인
+- 날짜: 2026-11-14
+- 작업: `start_donmulwon.ps1`
+- 변경: 기존 런처는 패키지 import 가능 여부만 검사해 pykrx가 이미 설치된 경우 requirements.txt의 상향 버전이 반영되지 않을 수 있었다. 이제 설치된 pykrx 버전을 확인하고 `1.1.3.dev0` 미만이면 자동 업그레이드한다.
+- 검증: GitHub 코드 반영 완료. 사용자 Windows PowerShell에서 실행 검증은 아직 필요하다.
