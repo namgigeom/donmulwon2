@@ -45,6 +45,9 @@ jobs:
           assert dashboard.image.width() == 1672
           assert dashboard.image.height() == 941
           assert dashboard._to_canvas(10, 10) is not None
+          dashboard.refresh_timer.stop()
+          dashboard.clock.stop()
           window.close()
+          app.processEvents()
           print("Pixel-art canvas construction and paint OK")
           PY
