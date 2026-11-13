@@ -48,7 +48,7 @@ def _company_profile_from_data(symbol: str, info: dict, annual: pd.DataFrame | N
             "net_income": _statement_metric(frame, ("Net Income", "Net Income Common Stockholders", "Net Income Continuous Operations")),
         }
 
-    annual_latest = metrics(annual)
+    annual_latest = metrics(annual) if annual is not None and not annual.empty else None
     annual_previous = metrics(annual.iloc[:, 1:]) if annual is not None and len(annual.columns) > 1 else None
     revenue_growth = None
     if annual_latest and annual_previous:
