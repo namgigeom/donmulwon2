@@ -169,37 +169,58 @@ class TechnicalChart(QWidget):
 
         p.setPen(QColor("#d9b77d"))
         p.drawText(QRectF(rsi_area.left(), rsi_area.top()-11, 70, 12), Qt.AlignmentFlag.AlignLeft, "RSI(10/14)")
-        rsi_values = [r.get("RSI10") for r in rows]
-        rsi_path = QPainterPath()
-        started = False
-        for i, value in enumerate(rsi_values):
-            if value is None:
-                started = False; continue
-            point = QPointF(px(i), rsi_area.bottom() - max(0, min(100, float(value))) / 100 * rsi_area.height())
-            if not started:
-                rsi_path.moveTo(point); started = True
-            else:
-                rsi_path.lineTo(point)
-        p.setPen(QPen(QColor("#d9b77d"), 1.3)); p.drawPath(rsi_path)
+        for key, color in (("RSI10", "#d9b77d"), ("RSI14", "#7ab8c5")):
+            rsi_path = QPainterPath()
+            started = False
+            for i, row in enumerate(rows):
+                value = row.get(key)
+                if value is None:
+                    started = False
+                    continue
+                point = QPointF(px(i), rsi_area.bottom() - max(0, min(100, float(value))) / 100 * rsi_area.height())
+                if not started:
+                    rsi_path.moveTo(point); started = True
+                else:
+                    rsi_path.lineTo(point)
+            p.setPen(QPen(QColor(color), 1.3))
+            p.drawPath(rsi_path)
         y50 = rsi_area.top() + rsi_area.height()/2
         p.setPen(QPen(QColor(105, 119, 108, 120), 1, Qt.PenStyle.DotLine))
         p.drawLine(QPointF(rsi_area.left(), y50), QPointF(rsi_area.right(), y50))
 
         p.setPen(QColor("#d9b77d"))
-        p.drawText(QRectF(macd_area.left(), macd_area.top()-11, 80, 12), Qt.AlignmentFlag.AlignLeft, "MACD HIST")
+        p.drawText(QRectF(macd_area.left(), macd_area.top()-11, 80, 12), Qt.AlignmentFlag.AlignLeft, "MACD 5/10/9")
         hist = [r.get("MACD_HIST") for r in rows]
-        valid = [abs(float(v)) for v in hist if v is not None]
+        macd_values = [r.get("MACD") for r in rows]
+        signal_values = [r.get("MACD_SIGNAL") for r in rows]
+        valid = [abs(float(v)) for series in (hist, macd_values, signal_values)
+                 for v in series if v is not None]
         max_abs = max(max(valid), 1e-9) if valid else 1
         zero_y = macd_area.center().y()
+        half_h = macd_area.height() * 0.43
         p.setPen(QPen(QColor("#6c7c70"), 1))
         p.drawLine(QPointF(macd_area.left(), zero_y), QPointF(macd_area.right(), zero_y))
         for i, value in enumerate(hist):
             if value is None: continue
             val = float(value)
-            bar_h = abs(val) / max_abs * macd_area.height() * 0.43
+            bar_h = abs(val) / max_abs * half_h
             color = QColor("#d87970" if val >= 0 else "#6fa6c4")
             p.fillRect(QRectF(px(i)-candle_w/2, zero_y-bar_h if val >= 0 else zero_y,
                               candle_w, max(1, bar_h)), color)
+        for series, color in ((macd_values, "#e7c46c"), (signal_values, "#8b9ed0")):
+            path = QPainterPath()
+            started = False
+            for i, value in enumerate(series):
+                if value is None:
+                    started = False
+                    continue
+                point = QPointF(px(i), zero_y - float(value) / max_abs * half_h)
+                if not started:
+                    path.moveTo(point); started = True
+                else:
+                    path.lineTo(point)
+            p.setPen(QPen(QColor(color), 1.1))
+            p.drawPath(path)
 
 
 class Dashboard(QWidget):
@@ -297,6 +318,7 @@ class Dashboard(QWidget):
             ("rsi", "RSI 10 / 14"), ("macd", "MACD / SIGNAL"),
             ("ma10", "10일 이동평균"), ("ma240", "240일 이동평균"),
             ("volume", "거래량 / 20일 평균"), ("bb", "볼린저 밴드"),
+            ("atr", "ATR(14)"), ("range20", "20일 지지 / 저항"),
         ]):
             lab = QLabel(title); lab.setObjectName("muted")
             val = QLabel("—"); val.setObjectName("value")
@@ -439,6 +461,10 @@ class Dashboard(QWidget):
         self.signal_labels["bb"].setText(
             f'{money(latest.get("bb_lower"))} ~ {money(latest.get("bb_upper"))}'
         )
+        self.signal_labels["atr"].setText(money(latest.get("atr14")))
+        self.signal_labels["range20"].setText(
+            f'{money(latest.get("support20"))} / {money(latest.get("resistance20"))}'
+        )
         checks = signal.get("checks", {})
         labels = [
             ("RSI(10/14) 상향 교차 및 동반 상승", checks.get("rsi_cross_and_rising")),
@@ -448,9 +474,21 @@ class Dashboard(QWidget):
         self.condition_text.setText("\n".join(
             f'{"✓" if ok else "✕"}  {label}' for label, ok in labels
         ))
-        self.report_text.setText(
-            "세 조건 모두 충족: 후보 신호" if signal.get("matched")
+        drawdown = latest.get("drawdown52w_pct")
+        risk_context = (
+            f'ATR14 {money(latest.get("atr14"))} · 20일 지지 {money(latest.get("support20"))} '
+            f'/ 저항 {money(latest.get("resistance20"))} · 52주 고점 대비 '
+            f'{number(drawdown)}%'
+            if drawdown is not None else "변동성/지지저항 데이터 계산 중"
+        )
+        verdict = (
+            "세 조건 모두 충족: 후보 신호"
+            if signal.get("matched")
             else "현재 봉 기준 필수 조건 미충족. 교차가 발생한 날인지 확인하세요."
+        )
+        self.report_text.setText(
+            verdict + "\\n" + risk_context +
+            "\\n목표·손절은 백테스트 검증 전 자동 제시하지 않습니다."
         )
         self.chart.set_records(data.get("ohlcv", []))
 
