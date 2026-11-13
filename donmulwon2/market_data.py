@@ -78,9 +78,12 @@ class KrxDataProvider:
                                                                etf=True, etn=True, elw=True)
             if frame is None or frame.empty:
                 return DataResult(False, message="투자자별 거래대금 데이터를 받지 못했습니다.")
-            row = frame.iloc[-1]
-            values = {str(key): int(value) for key, value in row.items() if pd.notna(value)}
-            return DataResult(True, {"date": day, "market": market, "values": values}, "KRX 투자자별 거래대금")
+            if "순매수" not in frame.columns:
+                return DataResult(False, message="투자자별 순매수 컬럼을 확인할 수 없습니다.")
+            net = pd.to_numeric(frame["순매수"], errors="coerce").fillna(0)
+            values = {str(investor): int(amount) for investor, amount in net.items()}
+            return DataResult(True, {"date": day, "market": market, "values": values},
+                              "KRX 투자자별 거래대금 순매수")
         except Exception as exc:
             return DataResult(False, message=f"투자자별 수급 수집 실패: {exc}")
 
