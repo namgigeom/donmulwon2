@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt, QThread, QTimer, QRectF, QPointF
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QMessageBox, QPushButton, QProgressBar, QTableWidget,
+    QMainWindow, QMessageBox, QPushButton, QProgressBar, QTableWidget, QComboBox,
     QTableWidgetItem, QVBoxLayout, QWidget, QHeaderView
 )
 
@@ -269,6 +269,8 @@ class Dashboard(QWidget):
         self.ticker_input.returnPressed.connect(self._analyze_ticker)
         self.search_button = QPushButton("종목 분석")
         self.search_button.clicked.connect(self._analyze_ticker)
+        self.market_selector = QComboBox()
+        self.market_selector.addItems(["KOSPI", "KOSDAQ"])
         self.scan_button = QPushButton("시장 검색")
         self.scan_button.clicked.connect(self._scan_market)
         self.refresh_button = QPushButton("시장 갱신")
@@ -276,8 +278,11 @@ class Dashboard(QWidget):
         controls.addWidget(self.ticker_input, 2)
         controls.addWidget(self.search_button)
         self.detail_panel.layout.addLayout(controls)
-        self.detail_panel.layout.addWidget(self.scan_button)
-        self.detail_panel.layout.addWidget(self.refresh_button)
+        scan_controls = QHBoxLayout()
+        scan_controls.addWidget(self.market_selector)
+        scan_controls.addWidget(self.scan_button)
+        scan_controls.addWidget(self.refresh_button)
+        self.detail_panel.layout.addLayout(scan_controls)
 
         self.stock_title = QLabel("종목을 검색하면 분석 결과가 표시됩니다.")
         self.stock_title.setObjectName("value")
@@ -383,7 +388,8 @@ class Dashboard(QWidget):
         self._run_worker("ticker", ticker=ticker)
 
     def _scan_market(self):
-        self._run_worker("scan", market="KOSPI")
+        self.scan_progress.setValue(0)
+        self._run_worker("scan", market=self.market_selector.currentText())
 
     def _on_progress(self, current, total, ticker):
         self.scan_progress.setValue(int(current / max(total, 1) * 100))
@@ -488,7 +494,11 @@ def _flow_label(data):
     if not data: return "수급 미수신"
     vals = data.get("values", {})
     if not vals: return "수급 미수신"
-    return " / ".join(f"{k} {v/100_000_000:+.0f}억" for k, v in list(vals.items())[:2])
+    preferred = ["외국인", "개인", "연기금", "금융투자", "투신", "보험"]
+    chosen = [(key, vals[key]) for key in preferred if key in vals][:2]
+    if not chosen:
+        chosen = list(vals.items())[:2]
+    return " / ".join(f"{k} {v/100_000_000:+.0f}억" for k, v in chosen)
 
 
 class MainWindow(QMainWindow):
