@@ -73,16 +73,29 @@ class AnalysisStore:
             ).fetchone()
         return json.loads(row[0]) if row else None
 
-    def recent_analyses(self, limit: int = 30):
+    def recent_analyses(self, limit: int = 100):
+        """Return analyses from the last five days and purge expired rows."""
+        from datetime import timedelta
+
+        cutoff = (datetime.now() - timedelta(days=5)).isoformat(timespec="seconds")
         with self._connect() as conn:
+            conn.execute("DELETE FROM analysis_history WHERE analyzed_at < ?", (cutoff,))
             rows = conn.execute(
                 """SELECT analyzed_at, ticker, name, trading_date, matched, payload
                    FROM analysis_history ORDER BY id DESC LIMIT ?""",
                 (limit,),
             ).fetchall()
-        return [
-            {"analyzed_at": row[0], "ticker": row[1], "name": row[2],
-             "trading_date": row[3], "matched": bool(row[4]),
-             "payload": json.loads(row[5])}
-            for row in rows
-        ]
+        items = []
+        for row in rows:
+            payload = json.loads(row[5])
+            latest = payload.get("latest") or {}
+            items.append({
+                "analyzed_at": row[0], "ticker": row[1], "name": row[2],
+                "trading_date": row[3], "matched": bool(row[4]),
+                "baseline_price": latest.get("close"),
+                "weekly": payload.get("weekly"),
+                "signal": payload.get("signal"),
+                "trade_plan": latest.get("trade_plan"),
+                "payload": payload,
+            })
+        return items
