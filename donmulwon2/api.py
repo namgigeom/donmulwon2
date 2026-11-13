@@ -22,6 +22,7 @@ app = FastAPI(
 _scan_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="donmulwon-scan")
 _scan_jobs = {}
 _scan_lock = threading.Lock()
+_raccoon_note_lock = threading.Lock()
 
 
 def _run_scan_job(job_id, market, limit):
@@ -156,6 +157,51 @@ def analysis_history(limit: int = Query(default=100, ge=1, le=200)):
             else None
         )
     return {"items": items, "retention_days": 5}
+
+
+
+@app.get("/api/market/raccoon-note")
+def raccoon_market_note():
+    """Generate and cache one AI market interpretation per KRX trading date."""
+    from .raccoon_ai import build_market_facts, generate_market_note
+    from .storage import AnalysisStore
+
+    with _raccoon_note_lock:
+        store = AnalysisStore()
+        analyzer = DonmulwonAnalyzer(store=store)
+        bulletins = []
+        for market in ("KOSPI", "KOSDAQ"):
+            result = analyzer.market_bulletin(market)
+            if not result.ok:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"{market} 시장 데이터 조회 실패: {result.message}",
+                )
+            bulletin = dict(result.data)
+            bulletin["market"] = market
+            bulletins.append(bulletin)
+
+        dates = [item.get("date") for item in bulletins if item.get("date")]
+        if not dates:
+            raise HTTPException(status_code=503, detail="당일 시장 기준일을 확인할 수 없습니다.")
+        trading_date = max(dates)
+        cached = store.get_raccoon_note(trading_date)
+        if cached:
+            return {"status": "ready", **cached, "cached": True}
+
+        facts = build_market_facts(bulletins)
+        try:
+            note, model = generate_market_note(facts)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        store.save_raccoon_note(trading_date, note, model, facts)
+        return {
+            "status": "ready",
+            "trading_date": trading_date,
+            "note": note,
+            "model": model,
+            "cached": False,
+        }
 
 
 @app.get("/api/toss/status")
