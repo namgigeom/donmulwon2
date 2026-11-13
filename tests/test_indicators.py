@@ -50,5 +50,18 @@ class IndicatorTests(unittest.TestCase):
         self.assertIsInstance(result["matched"], bool)
 
 
+    def test_weekly_resample_aggregates_ohlcv_and_omits_partial_week(self):
+        from donmulwon2.indicators import resample_weekly_ohlcv
+
+        dates = pd.bdate_range("2026-01-05", periods=8)  # ends Wednesday
+        frame = ohlcv(range(100, 108))
+        frame.index = dates
+        weekly = resample_weekly_ohlcv(frame)
+        self.assertEqual(len(weekly), 1)
+        self.assertEqual(int(weekly.iloc[0]["시가"]), 100)
+        self.assertEqual(int(weekly.iloc[0]["종가"]), 104)
+        self.assertEqual(int(weekly.iloc[0]["거래량"]), sum(1000 + i * 10 for i in range(5)))
+
+
 if __name__ == "__main__":
     unittest.main()
