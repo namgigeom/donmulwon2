@@ -23,5 +23,7 @@ jobs:
         run: python -m compileall -q donmulwon2 tests
       - name: Run indicator unit tests
         run: python -m unittest discover -s tests -v
+      - name: Install Qt runtime libraries
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
       - name: Import GUI modules
         run: python -c "from donmulwon2.dashboard import Dashboard, TechnicalChart; print('GUI imports OK')"
