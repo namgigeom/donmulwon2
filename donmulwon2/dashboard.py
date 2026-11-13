@@ -302,7 +302,8 @@ class Dashboard(QWidget):
         else:
             self._text(p, 510, 803, "오른쪽 [종목 스캔]을 눌러 KOSPI/KOSDAQ을 검색하세요.", 14, "#e7dfd2")
             self._text(p, 510, 830, "조건: RSI 교차 · MACD 상향 교차 · 종가 10일선 돌파", 12, "#c7c3d0")
-        self._text(p, 510, 867, self.status[:48], 11, "#b8b4c2")
+        if not self.scan_data and not (self._busy and self.progress[1]):
+            self._text(p, 510, 867, self.status[:48], 11, "#b8b4c2")
 
     def _paint_charts(self, p):
         # Monitor screen in the artwork, and the lower chart viewport.
