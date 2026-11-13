@@ -88,6 +88,13 @@ function formatCompanyMoney(value: number | null | undefined, currency?: string)
   return new Intl.NumberFormat("ko-KR", { style: "currency", currency: currency || "USD", notation: "compact", maximumFractionDigits: 2 }).format(value);
 }
 
+function formatCompanyPrice(value: number | null | undefined, currency?: string) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "자료 없음";
+  return currency === "KRW"
+    ? Math.round(value).toLocaleString("ko-KR") + "원"
+    : new Intl.NumberFormat("ko-KR", { style: "currency", currency: currency || "USD", maximumFractionDigits: 2 }).format(value);
+}
+
 function buildMarketNarrative(kospi?: MarketBulletin, kosdaq?: MarketBulletin) {
   if (!kospi || !kosdaq) return "코스피·코스닥 지수와 업종·수급 데이터를 모두 받은 뒤 장세를 요약합니다.";
 
@@ -696,7 +703,7 @@ function App() {
                       <div className="company-subheading"><b>애널리스트 전망</b><span>Yahoo Finance 컨센서스</span></div>
                       <div className="company-financial-grid">
                         <div><small>투자의견</small><b>{stockAnalysis.company.outlook?.rating || "의견 미수신"}</b></div>
-                        <div><small>평균 목표주가</small><b>{formatCompanyMoney(stockAnalysis.company.outlook?.target_mean_price, stockAnalysis.company.currency)}</b></div>
+                        <div><small>평균 목표주가</small><b>{formatCompanyPrice(stockAnalysis.company.outlook?.target_mean_price, stockAnalysis.company.currency)}</b></div>
                         <div><small>현재가 대비 목표 상승여력</small><b>{typeof stockAnalysis.company.outlook?.target_upside_pct === "number" ? (stockAnalysis.company.outlook.target_upside_pct > 0 ? "+" : "") + stockAnalysis.company.outlook.target_upside_pct.toFixed(1) + "%" : "—"}</b></div>
                         <div><small>의견 제시 애널리스트</small><b>{stockAnalysis.company.outlook?.analyst_count ? stockAnalysis.company.outlook.analyst_count + "명" : "—"}</b></div>
                       </div>
