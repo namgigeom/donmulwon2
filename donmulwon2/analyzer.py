@@ -74,6 +74,7 @@ class DonmulwonAnalyzer:
                     (close / _number(last.get("HIGH252")) - 1) * 100
                     if close and _number(last.get("HIGH252")) else None
                 ),
+                "trade_plan": _trade_plan(close, _number(last.get("ATR14"))),
             },
         }
         if include_ohlcv:
@@ -147,6 +148,30 @@ class DonmulwonAnalyzer:
         except Exception as exc:
             return DataResult(False, message=f"시장 종목 검색 실패: {exc}")
 
+
+
+
+def _trade_plan(close: float | None, atr: float | None) -> dict:
+    """Create transparent ATR-based reference levels, never a guaranteed trade recommendation."""
+    if close is None or atr is None or close <= 0 or atr <= 0:
+        return {"ready": False, "reason": "ATR/종가 데이터가 부족해 기준 가격을 계산할 수 없습니다."}
+    entry_low = close - atr * 0.30
+    entry_high = close + atr * 0.20
+    stop = close - atr * 1.50
+    risk = close - stop
+    return {
+        "ready": True,
+        "method": "최근 종가와 ATR(14) 기반 참고값",
+        "entry_low": round(entry_low, 2),
+        "entry_high": round(entry_high, 2),
+        "stop_loss": round(stop, 2),
+        "target_1": round(close + risk * 2, 2),
+        "target_2": round(close + risk * 3, 2),
+        "risk_per_share": round(risk, 2),
+        "reward_risk_1": 2.0,
+        "reward_risk_2": 3.0,
+        "warning": "가격 변동성 기반 참고 구간이며 갭·유동성·시장 급변 시 손실은 기준을 초과할 수 있습니다.",
+    }
 
 
 def _weekly_summary(frame: pd.DataFrame) -> dict:
