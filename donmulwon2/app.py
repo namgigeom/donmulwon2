@@ -37,13 +37,19 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1000, 563)
 
         project_root = Path(__file__).resolve().parent
-        image_path = project_root / "assets" / "donmulwon2_main_screen.png"
+        # Support both the package-local path and the repository-root assets folder.
+        candidates = [
+            project_root / "assets" / "donmulwon2_main_screen.png",
+            project_root.parent / "assets" / "donmulwon2_main_screen.png",
+        ]
+        image_path = next((path for path in candidates if path.exists()), candidates[0])
 
         if not image_path.exists():
             central = QWidget()
             layout = QVBoxLayout(central)
             message = QLabel(
                 "메인 화면 이미지 파일을 찾을 수 없습니다.\n\n"
+                "assets/donmulwon2_main_screen.png 또는\n"
                 "donmulwon2/assets/donmulwon2_main_screen.png\n"
                 "위 경로에 이미지 파일을 넣어주세요."
             )
