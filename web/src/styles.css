@@ -479,3 +479,6 @@ button { color: inherit; }
   .chart-panel { min-height: 540px; }
   .chart-empty { min-height: 380px; }
 }
+
+.raccoon-note-label { margin: 17px 0 7px; color: #8fa993; font: 9px var(--mono); letter-spacing: .08em; }
+.analyst-message { margin-top: 0; }
