@@ -38,10 +38,19 @@ class DonmulwonAnalyzer:
         close = _number(last.get("종가"))
         prev_close = _number(previous.get("종가"))
         change_pct = ((close / prev_close) - 1) * 100 if close and prev_close else None
+        company_loader = getattr(self.provider, "company_profile", None)
+        company_result = (
+            company_loader(ticker, current_price=close)
+            if include_ohlcv and callable(company_loader)
+            else DataResult(False, message="기업 정보 조회는 개별 종목 분석에서만 실행합니다.")
+        )
         result = {
             "ticker": ticker,
             "name": name,
             "trading_date": date,
+            "company": company_result.data if company_result.ok else {
+                "available": False, "source": "Yahoo Finance", "message": company_result.message
+            },
             "signal": signal,
             "matched": bool(signal.get("matched")),
             "weekly": weekly_summary,
