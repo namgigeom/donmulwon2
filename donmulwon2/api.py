@@ -171,13 +171,16 @@ def raccoon_market_note():
         analyzer = DonmulwonAnalyzer(store=store)
         bulletins = []
         for market in ("KOSPI", "KOSDAQ"):
-            result = analyzer.market_bulletin(market)
-            if not result.ok:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"{market} 시장 데이터 조회 실패: {result.message}",
-                )
-            bulletin = dict(result.data)
+            bulletin = store.latest_bulletin(market)
+            if not bulletin:
+                result = analyzer.market_bulletin(market)
+                if not result.ok:
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"{market} 시장 데이터 조회 실패: {result.message}",
+                    )
+                bulletin = result.data
+            bulletin = dict(bulletin)
             bulletin["market"] = market
             bulletins.append(bulletin)
 
