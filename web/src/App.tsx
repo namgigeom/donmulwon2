@@ -517,7 +517,7 @@ function App() {
                 <button type="button" className={scanMarket === "KOSPI" ? "selected" : ""} onClick={() => setScanMarket("KOSPI")}>코스피</button>
                 <button type="button" className={scanMarket === "KOSDAQ" ? "selected" : ""} onClick={() => setScanMarket("KOSDAQ")}>코스닥</button>
               </div>
-              <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "선택 시장 스캔 시작"}</button>
+              <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "전체 종목 검색 시작"}</button>
               {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 후보 {scanResult.matches.length}개 · 오류 {scanResult.error_count}건</span>}
             </div>
             {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
@@ -525,7 +525,7 @@ function App() {
             {scanResult && <div className="scanner-table-wrap">
               {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다.</div> :
               <table className="scanner-table">
-                <thead><tr><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 위험</th><th></th></tr></thead>
+                <thead><tr><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 필터</th><th></th></tr></thead>
                 <tbody>{scanResult.matches.map((item) => {
                   const below240 = typeof item.latest?.ma240 === "number" && typeof item.latest?.close === "number" && item.latest.close < item.latest.ma240;
                   return <tr key={item.ticker}>
@@ -536,7 +536,7 @@ function App() {
                     <td>{item.weekly?.ready ? item.weekly.trend : "데이터 부족"}</td>
                     <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ ${Math.round(item.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}` : "산출 불가"}</td>
                     <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")} / ${Math.round(item.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}` : "—"}</td>
-                    <td><span className={below240 ? "risk-flag" : "risk-ok"}>{below240 ? "240일선 아래" : "해당 없음"}</span></td>
+                    <td><span className={below240 ? "risk-flag" : "risk-ok"}>{below240 ? "제외 대상" : "통과"}</span></td>
                     <td><button type="button" className="row-action" onClick={() => openCandidate(item)}>차트 분석</button></td>
                   </tr>;
                 })}</tbody>
