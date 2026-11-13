@@ -33,7 +33,8 @@ class KrxDataProvider:
         start = end - timedelta(days=max(max_days, 30))
         try:
             frame = stock.get_index_ohlcv_by_date(
-                start.strftime("%Y%m%d"), end.strftime("%Y%m%d"), "1001"
+                start.strftime("%Y%m%d"), end.strftime("%Y%m%d"), "1001",
+                name_display=False,
             )
             if frame is not None and not frame.empty:
                 return frame.index[-1].strftime("%Y%m%d")
@@ -46,7 +47,8 @@ class KrxDataProvider:
             end = datetime.now()
             start = end - timedelta(days=days * 2)
             frame = stock.get_index_ohlcv_by_date(
-                start.strftime("%Y%m%d"), self._date(end), index_code
+                start.strftime("%Y%m%d"), self._date(end), index_code,
+                name_display=False,
             )
             if frame is None or frame.empty:
                 return DataResult(False, message="지수 데이터를 받지 못했습니다.")
