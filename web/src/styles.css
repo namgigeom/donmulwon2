@@ -327,11 +327,11 @@ button { color: inherit; }
 .indicator-line { fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .bb-line { stroke: #879d90; stroke-width: 1.1; stroke-dasharray: 4 4; opacity: .8; }
 .bb-mid-line { stroke: #a6b8aa; stroke-width: 1; opacity: .65; }
-.ma10-line { stroke: #f0c36c; }.ma20-line { stroke: #6db8ef; }.ma60-line { stroke: #c19be9; }
+.ma10-line { stroke: #f0c36c; }.ma20-line { stroke: #6db8ef; }
 .volume-bar.up { fill: rgba(239,98,105,.72); }.volume-bar.down { fill: rgba(77,156,232,.72); }
 .macd-positive { fill: rgba(239,98,105,.72); }.macd-negative { fill: rgba(77,156,232,.72); }
 .macd-line { stroke: #f0c36c; }.signal-line { stroke: #6db8ef; }
-.rsi10-line { stroke: #f0c36c; }.rsi14-line { stroke: #c19be9; }
+.rsi10-line { stroke: #ffd477; stroke-width: 1.05; opacity: .98; }.rsi14-line { stroke: #c9a8ff; stroke-width: 1.05; opacity: .98; }
 .legend-rsi10, .legend-macd { color: #f0c36c; }.legend-rsi14, .legend-signal { color: #6db8ef; }
 .chart-date-axis { display: flex; justify-content: space-between; padding: 2px 5px 6px; color: #829489; font: 9px var(--mono); }
 .indicator-legend { justify-content: flex-end; padding-top: 5px; }
@@ -449,6 +449,20 @@ button { color: inherit; }
 .page-title-row h1 { margin: 8px 0 5px; color: #edf3ed; font-size: 27px; letter-spacing: -1px; }
 .page-title-row p { margin: 0; color: #87988e; font-size: 12px; }
 .stock-analysis-main { padding: 22px; }
+.company-profile-card { margin-top: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: rgba(8,15,11,.2); }
+.company-source { color: var(--muted); font: 9px var(--mono); }
+.company-summary { margin: 14px 0 16px; color: #c4d1c7; font-size: 12px; line-height: 1.8; }
+.company-facts, .company-financial-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+.company-facts > div, .company-financial-grid > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.018); }
+.company-facts small, .company-financial-grid small { color: var(--muted); font-size: 10px; }
+.company-facts b, .company-financial-grid b { color: #e0e9e1; font-size: 12px; overflow-wrap: anywhere; }
+.company-financials, .company-outlook { margin-top: 17px; }
+.company-subheading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 9px; color: #cbd8ce; font-size: 11px; }
+.company-subheading span { color: var(--muted); font: 9px var(--mono); }
+.company-financial-grid + .company-subheading { margin-top: 16px; }
+.company-disclaimer { margin-top: 14px; color: #84958a; font-size: 10px; line-height: 1.7; }
+.company-disclaimer a { color: #b8d7ad; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 900px) { .company-facts, .company-financial-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 .stock-analysis-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 .stock-analysis-toolbar .chart-controls { display: flex; align-items: center; gap: 10px; }
 .stock-identity { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 2px 14px; }
@@ -470,6 +484,7 @@ button { color: inherit; }
 .history-table-wrap { overflow-x: auto; }.history-table { width: 100%; border-collapse: collapse; white-space: nowrap; }.history-table th, .history-table td { padding: 14px 12px; border-bottom: 1px solid var(--line); text-align: left; font-size: 11px; }.history-table th { color: #82968a; font-size: 10px; font-weight: 500; }.history-table td { color: #c8d5ca; }.history-table td small { display: block; margin-top: 4px; color: var(--muted); font: 9px var(--mono); }.history-table .positive { color: #e28e86; }.history-table .negative { color: #83aee0; }
 @media (max-width: 780px) {
   .stock-detail-grid { grid-template-columns: 1fr; }
+  .company-facts, .company-financial-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .stock-large-chart { min-height: 500px; padding: 10px 4px; }
   .stock-large-chart .price-svg { height: 300px; }
   .stock-analysis-toolbar .chart-controls { flex-wrap: wrap; }
