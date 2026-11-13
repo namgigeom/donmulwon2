@@ -1,9 +1,10 @@
 """Stock screening and market bulletin assembly."""
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Callable
+import math
 
+import pandas as pd
 from pykrx import stock
 
 from .indicators import calculate_indicators, latest_signal
@@ -21,9 +22,16 @@ class DonmulwonAnalyzer:
         if not history.ok:
             return history
         frame = calculate_indicators(history.data)
+        if frame.empty:
+            return DataResult(False, message="지표 계산 결과가 비어 있습니다.")
         signal = latest_signal(history.data)
         date = frame.index[-1].strftime("%Y%m%d")
         name = self.provider.ticker_name(ticker)
+        last = frame.iloc[-1]
+        previous = frame.iloc[-2] if len(frame) > 1 else last
+        close = _number(last.get("종가"))
+        prev_close = _number(previous.get("종가"))
+        change_pct = ((close / prev_close) - 1) * 100 if close and prev_close else None
         result = {
             "ticker": ticker,
             "name": name,
@@ -31,23 +39,27 @@ class DonmulwonAnalyzer:
             "signal": signal,
             "matched": bool(signal.get("matched")),
             "latest": {
-                "close": int(frame.iloc[-1]["종가"]),
-                "change_pct": float(frame.iloc[-1].get("등락률", 0)),
-                "volume": int(frame.iloc[-1].get("거래량", 0)),
-                "ma10": _number(frame.iloc[-1].get("MA10")),
-                "ma20": _number(frame.iloc[-1].get("MA20")),
-                "ma60": _number(frame.iloc[-1].get("MA60")),
-                "ma240": _number(frame.iloc[-1].get("MA240")),
-                "rsi10": _number(frame.iloc[-1].get("RSI10")),
-                "rsi14": _number(frame.iloc[-1].get("RSI14")),
-                "macd": _number(frame.iloc[-1].get("MACD")),
-                "macd_signal": _number(frame.iloc[-1].get("MACD_SIGNAL")),
-                "macd_hist": _number(frame.iloc[-1].get("MACD_HIST")),
-                "bb_upper": _number(frame.iloc[-1].get("BB_UPPER")),
-                "bb_middle": _number(frame.iloc[-1].get("BB_MIDDLE")),
-                "bb_lower": _number(frame.iloc[-1].get("BB_LOWER")),
+                "close": _int(last.get("종가")),
+                "change_pct": change_pct,
+                "volume": _int(last.get("거래량")),
+                "ma10": _number(last.get("MA10")),
+                "ma20": _number(last.get("MA20")),
+                "ma60": _number(last.get("MA60")),
+                "ma120": _number(last.get("MA120")),
+                "ma240": _number(last.get("MA240")),
+                "rsi10": _number(last.get("RSI10")),
+                "rsi14": _number(last.get("RSI14")),
+                "macd": _number(last.get("MACD")),
+                "macd_signal": _number(last.get("MACD_SIGNAL")),
+                "macd_hist": _number(last.get("MACD_HIST")),
+                "bb_upper": _number(last.get("BB_UPPER")),
+                "bb_middle": _number(last.get("BB_MIDDLE")),
+                "bb_lower": _number(last.get("BB_LOWER")),
+                "volume_ma20": _number(last.get("VOLUME_MA20")),
+                "volume_ratio": _number(last.get("거래량")) / _number(last.get("VOLUME_MA20"))
+                    if _number(last.get("거래량")) is not None and _number(last.get("VOLUME_MA20")) else None,
             },
-            "ohlcv": frame.tail(260).reset_index().rename(columns={frame.index.name or "날짜": "date"}).to_dict("records"),
+            "ohlcv": _frame_records(frame.tail(260)),
         }
         self.store.save_analysis(ticker, name, date, result)
         return DataResult(True, result, "분석 완료")
@@ -68,9 +80,8 @@ class DonmulwonAnalyzer:
         else:
             tone = "상승·하락 종목 비슷"
         data["one_line_summary"] = (
-            f'{market} {data["date"]}: {tone} '
-            f'(상승 {adv} / 하락 {dec}), 거래대금 '
-            f'{data["trading_value"]:,}원'
+            f'{market}: {tone} (상승 {adv:,} / 하락 {dec:,}), '
+            f'거래대금 {data["trading_value"]:,}원'
         )
         self.store.save_bulletin(data["date"], market, data)
         return DataResult(True, data, "시장 게시판 갱신")
@@ -81,11 +92,10 @@ class DonmulwonAnalyzer:
         progress: Callable[[int, int, str], None] | None = None,
         limit: int | None = None,
     ) -> DataResult:
-        """Scan every listed ticker by default; limit is useful for a short trial run."""
         try:
             date = self.provider.latest_trading_date()
             tickers = stock.get_market_ticker_list(date, market=market)
-            if limit:
+            if limit is not None:
                 tickers = tickers[:limit]
             matches, errors = [], []
             total = len(tickers)
@@ -107,9 +117,24 @@ class DonmulwonAnalyzer:
 
 def _number(value):
     try:
-        if value is None:
+        if value is None or pd.isna(value):
             return None
         number = float(value)
-        return number if number == number else None
+        return number if math.isfinite(number) else None
     except (TypeError, ValueError):
         return None
+
+
+def _int(value):
+    number = _number(value)
+    return int(number) if number is not None else None
+
+
+def _frame_records(frame):
+    rows = []
+    for index, row in frame.iterrows():
+        item = {"date": index.strftime("%Y-%m-%d") if hasattr(index, "strftime") else str(index)}
+        for key, value in row.items():
+            item[str(key)] = _number(value)
+        rows.append(item)
+    return rows
