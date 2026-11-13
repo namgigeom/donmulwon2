@@ -256,3 +256,17 @@
 - 보안: 기존 `.gitignore`에서 `.env`가 제외되는 것을 확인했다. 사용자는 `.env.example`을 `.env`로 복사해 로컬에서 값만 입력해야 한다.
 - 연동 상태: 현재 `donmulwon2/market_data.py`는 `pykrx` 공개 데이터 조회를 사용하며 Toss 인증값을 읽지 않는다. 따라서 이번 작업은 안전한 입력 템플릿만 마련한 것이고, Toss API 실제 연결이나 환경변수 로딩을 구현한 것은 아니다. Toss API 문서에 맞춘 필드명과 인증 흐름 확인 후 별도 연동이 필요하다.
 - 검증: GitHub `web-rebuild` 브랜치에 `.env.example` 생성 성공. 로컬 환경에서 복사·실행 검증은 아직 수행하지 않았다.
+
+
+## 9. Toss Securities Open API 조회 연동 1차
+
+- 날짜: 2026-11-14
+- 작업: `donmulwon2/toss_api.py` 신규, `donmulwon2/market_data.py`, `donmulwon2/api.py`, `.env.example` 수정
+- 인증: 공식 OAuth 2.0 Client Credentials 방식으로 액세스 토큰을 발급하고 만료 전 재사용하도록 구현했다. 공식 변수명 `TOSS_CLIENT_ID`, `TOSS_CLIENT_SECRET`을 사용하며, 기존 템플릿 변수명 `TOSS_API_KEY`, `TOSS_API_SECRET`도 호환 alias로 읽는다. .env는 저장소 루트에서 직접 읽으며 OS 환경변수를 우선한다.
+- 종목 데이터: 인증정보가 설정되면 개별 종목 일봉 OHLCV를 Toss `GET /api/v1/candles`에서 가져와 기존 Python 지표 계산 엔진 입력 형식으로 변환한다. 최대 200개 제한을 고려해 `nextBefore` 페이지네이션을 지원한다. 종목명은 `GET /api/v1/stocks`를 시도한다.
+- 대체 동작: Toss 인증정보가 없으면 기존 pykrx 데이터 경로를 유지한다. Toss 인증이 설정되어 있으나 요청이 실패하면 오류를 반환하며, 실패한 Toss 응답을 pykrx 값으로 조용히 대체하지 않는다.
+- 조회 API: `GET /api/toss/status`, `GET /api/toss/accounts`, `GET /api/toss/holdings` 추가. 계좌/보유종목 조회는 `TOSS_ACCOUNT_SEQ`를 요구한다.
+- 안전 범위: 이 클라이언트에는 주문 생성·정정·취소 메서드를 구현하지 않았다. API 키와 시크릿은 코드/로그에 기록하지 않으며 .env는 기존 .gitignore 규칙으로 커밋 제외한다.
+- 공식 문서: OAuth 2.0 Client Credentials, 일봉 캔들 `GET /api/v1/candles` (최대 200개/페이지), 종목정보 및 계좌·보유자산 엔드포인트를 기준으로 구현했다.
+- 검증: GitHub `web-rebuild` 브랜치에 파일 변경 및 기록 반영 성공. 실제 사용자 인증정보로 토큰 발급·응답 스키마·계좌조회는 실행하지 않았다. 토스 개발자 콘솔의 허용 IP 등록이 필요할 수 있으며, 미등록 IP는 403으로 거부된다.
+- 주의/다음: 현재 시장 전체 breadth 및 전체 종목 스캔은 여전히 pykrx 기반이다. Toss 캔들 응답의 실제 페이지 필드와 사용자 계정 권한을 로컬에서 확인한 뒤 보완해야 한다. 현재 Toss 캔들 API는 일봉/1분봉을 제공하므로 주봉은 기존 Python 엔진에서 일봉으로부터 집계한다.
