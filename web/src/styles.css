@@ -310,7 +310,7 @@ button { color: inherit; }
 .chart-legend > span, .indicator-legend > span { display: inline-flex; align-items: center; gap: 5px; }
 .chart-legend i { display: inline-block; width: 13px; height: 3px; border-radius: 2px; }
 .legend-candle-up { background: #ef6269; }.legend-candle-down { background: #4d9ce8; }
-.legend-ma10 { color: #f0c36c; }.legend-ma20 { color: #6db8ef; }.legend-ma60 { color: #c19be9; }.legend-bb { color: #91a69a; }
+.legend-ma10 { color: #f0c36c; }.legend-ma240 { color: #c19be9; }.legend-bb { color: #91a69a; }
 .chart-panel-title { display: flex; justify-content: space-between; align-items: center; padding: 8px 5px 3px; border-top: 1px solid rgba(191,213,196,.1); color: #dce7df; font-size: 11px; }
 .chart-panel-title span { color: #87998e; font-size: 9px; }
 .subchart-title { margin-top: 7px; }
@@ -327,7 +327,7 @@ button { color: inherit; }
 .indicator-line { fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .bb-line { stroke: #879d90; stroke-width: 1.1; stroke-dasharray: 4 4; opacity: .8; }
 .bb-mid-line { stroke: #a6b8aa; stroke-width: 1; opacity: .65; }
-.ma10-line { stroke: #f0c36c; }.ma20-line { stroke: #6db8ef; }
+.ma10-line { stroke: #f0c36c; }.ma240-line { stroke: #c19be9; stroke-width: 1.5; }
 .volume-bar.up { fill: rgba(239,98,105,.72); }.volume-bar.down { fill: rgba(77,156,232,.72); }
 .macd-positive { fill: rgba(239,98,105,.72); }.macd-negative { fill: rgba(77,156,232,.72); }
 .macd-line { stroke: #f0c36c; }.signal-line { stroke: #6db8ef; }
