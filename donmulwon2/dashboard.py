@@ -222,8 +222,8 @@ class Dashboard(QWidget):
         # inside the parchment surfaces; wooden borders, pins and decorations remain.
         self._paper_patch(p, (858, 252, 247, 79), 201)
         self._paper_patch(p, (1130, 252, 245, 79), 202)
-        self._paper_patch(p, (858, 369, 250, 138), 203)
-        self._paper_patch(p, (1135, 369, 243, 138), 204)
+        self._paper_patch(p, (889, 369, 219, 138), 203)
+        self._paper_patch(p, (1174, 369, 204, 138), 204)
         self._paper_patch(p, (866, 584, 444, 69), 205)
 
         kp, kd = self.market_data.get("KOSPI", {}), self.market_data.get("KOSDAQ", {})
@@ -284,16 +284,21 @@ class Dashboard(QWidget):
             pct = current/total
             status = f"전 종목 검사 중  {current:,}/{total:,}  ({pct*100:.0f}%)"
             self._text(p, 510, 802, status, 16, "#f4e8d5", True)
-            self._text(p, 510, 827, ticker, 12, "#c7c3d0")
+            self._text(p, 510, 820, ticker, 11, "#c7c3d0")
             p.fillRect(QRectF(514, 829, 350*pct, 17), QColor("#61bd78"))
         elif self.scan_data:
             matches = self.scan_data.get("matches", [])
             self._text(p, 510, 801, f'검색 {self.scan_data.get("scanned", 0):,}종목 · 조건 충족 {len(matches)}종목',
                        16, "#f4e8d5", True)
-            for i, item in enumerate(matches[:2]):
-                self._text(p, 510, 828+i*22,
-                           f'{item.get("name", "")}  {item.get("ticker", "")}  {_fmt_money(item.get("latest", {}).get("close"))}원',
-                           13, "#d9e4d7")
+            p.fillRect(QRectF(514, 829, 350, 17), QColor("#61bd78"))
+            if matches:
+                names = "  ·  ".join(
+                    f'{item.get("name", "")} {item.get("ticker", "")}'
+                    for item in matches[:3]
+                )
+                self._text(p, 510, 870, names[:50], 11, "#d9e4d7")
+            else:
+                self._text(p, 510, 870, "현재 거래일 기준 조건 충족 종목 없음", 11, "#c7c3d0")
         else:
             self._text(p, 510, 803, "오른쪽 [종목 스캔]을 눌러 KOSPI/KOSDAQ을 검색하세요.", 14, "#e7dfd2")
             self._text(p, 510, 830, "조건: RSI 교차 · MACD 상향 교차 · 종가 10일선 돌파", 12, "#c7c3d0")
