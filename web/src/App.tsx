@@ -586,7 +586,7 @@ function App() {
                 })}</tbody>
               </table>}
             </div>}
-            <div className="scanner-footnote">데이터 출처: KRX 종목 목록 및 설정된 시세 공급자. 스캔은 조회 전용이며 주문을 실행하지 않습니다. 장중 데이터는 종가 확정 신호와 구분해 해석해야 합니다.</div>
+            <div className="scanner-footnote">등급은 완료 주봉의 종가·MA10/20 위치와 기울기, MACD, RSI를 100점으로 점수화합니다(A 80점 이상 / B 55~79점 / C 54점 이하). 주봉 데이터 부족은 C로 분류합니다. 데이터 출처: KRX 종목 목록 및 설정된 시세 공급자. 스캔은 조회 전용이며 주문을 실행하지 않습니다.</div>
           </section>
 
           <footer className="page-footer"><span>© 2026 DONMULWON 2</span><span>DATA FIRST · RISK AWARE · NO AUTO TRADING</span></footer>
