@@ -62,6 +62,19 @@ class Panel(QFrame):
                 color: #f5ead7; background: #17211e; border: 1px solid #8f7956;
                 border-radius: 4px; padding: 6px;
             }
+            QComboBox {
+                color: #f5ead7; background: #17211e; border: 1px solid #8f7956;
+                border-radius: 4px; padding: 5px 8px;
+            }
+            QComboBox QAbstractItemView {
+                color: #f5ead7; background: #17211e; selection-background-color: #526b55;
+            }
+            QTabWidget::pane { border: 1px solid #4b5b50; }
+            QTabBar::tab {
+                color: #d8d1c2; background: #26332d; padding: 6px 12px;
+                border: 1px solid #4b5b50;
+            }
+            QTabBar::tab:selected { color: #f3d9a7; background: #405246; }
             QTableWidget {
                 color: #eee7d8; background: rgba(12, 19, 17, 220);
                 gridline-color: #435149; border: 0;
