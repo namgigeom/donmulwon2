@@ -35,10 +35,11 @@ jobs:
               assert image.mode == 'RGBA', f'Expected RGBA, got {image.mode}'
               assert image.width > 0 and image.height > 0
               alpha = image.getchannel('A')
-              assert alpha.getbbox() == (0, 0, image.width, image.height), 'Unexpected empty bounds'
+              assert alpha.getbbox() is not None, 'Character alpha is empty'
               assert alpha.getpixel((0, 0)) == 0, 'Top-left background is not transparent'
               assert alpha.getpixel((image.width - 1, image.height - 1)) == 0, 'Bottom-right background is not transparent'
-          print(f'Isolated Neoburi PNG OK: {image.size if False else path}')
+              dimensions = image.size
+          print(f'Isolated Neoburi PNG OK: {dimensions}')
           PY
       - name: Install Qt runtime libraries
         run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
