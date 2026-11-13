@@ -13,7 +13,7 @@ if (-not (Test-Path $VenvPython)) {
 }
 
 Write-Host "[2/4] Checking Python API dependencies..."
-$PythonCheck = & $VenvPython -c "import fastapi, uvicorn, pandas, pykrx" 2>&1
+$PythonCheck = & $VenvPython -c "import fastapi, uvicorn, pandas, pykrx, yfinance" 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Installing Python dependencies from requirements.txt..."
     & $VenvPython -m pip install --upgrade pip
