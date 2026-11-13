@@ -14,10 +14,31 @@ def calculate_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     delta = close.diff()
 
     def rsi(period: int) -> pd.Series:
+        # Wilder's RSI: seed the smoothed averages with the first period's
+        # simple average, then apply Wilder's recursive moving average.
         gain = delta.clip(lower=0)
         loss = -delta.clip(upper=0)
-        avg_gain = gain.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
-        avg_loss = loss.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
+        avg_gain = pd.Series(float("nan"), index=close.index, dtype="float64")
+        avg_loss = pd.Series(float("nan"), index=close.index, dtype="float64")
+
+        if len(close) <= period:
+            return avg_gain
+
+        avg_gain.iloc[period] = gain.iloc[1 : period + 1].mean()
+        avg_loss.iloc[period] = loss.iloc[1 : period + 1].mean()
+
+        for i in range(period + 1, len(close)):
+            current_gain = gain.iloc[i]
+            current_loss = loss.iloc[i]
+            if pd.isna(current_gain) or pd.isna(current_loss):
+                continue
+            avg_gain.iloc[i] = (
+                avg_gain.iloc[i - 1] * (period - 1) + current_gain
+            ) / period
+            avg_loss.iloc[i] = (
+                avg_loss.iloc[i - 1] * (period - 1) + current_loss
+            ) / period
+
         rs = avg_gain / avg_loss.where(avg_loss.ne(0))
         result = 100 - (100 / (1 + rs))
         result = result.mask((avg_gain.eq(0)) & (avg_loss.eq(0)), 50)
