@@ -162,9 +162,20 @@ class DonmulwonAnalyzer:
                     errors.append({"ticker": ticker, "error": result.message})
                 if progress:
                     progress(index, total, ticker)
+            grade_order = {"A": 0, "B": 1, "C": 2}
+            matches.sort(key=lambda item: (
+                grade_order.get((item.get("weekly") or {}).get("grade", "C"), 2),
+                -((item.get("weekly") or {}).get("grade_score") or 0),
+                -((item.get("latest") or {}).get("volume_ratio") or 0),
+            ))
+            grade_counts = {
+                grade: sum(1 for item in matches if (item.get("weekly") or {}).get("grade", "C") == grade)
+                for grade in ("A", "B", "C")
+            }
             return DataResult(True, {
                 "market": market.upper(), "date": date, "scanned": total,
-                "matches": matches, "error_count": len(errors), "errors": errors[:30],
+                "matches": matches, "grade_counts": grade_counts,
+                "error_count": len(errors), "errors": errors[:30],
             }, "종목 검색 완료")
         except Exception as exc:
             return DataResult(False, message=f"시장 종목 검색 실패: {exc}")
@@ -198,44 +209,91 @@ def _trade_plan(close: float | None, atr: float | None) -> dict:
 def _weekly_summary(frame: pd.DataFrame) -> dict:
     """Summarize the last completed weekly candle as context, not a scan filter."""
     if frame is None or frame.empty:
-        return {"ready": False, "reason": "완료된 주봉 데이터가 부족합니다."}
+        return {
+            "ready": False, "reason": "완료된 주봉 데이터가 부족합니다.",
+            "trend": "데이터 부족", "grade": "C", "grade_score": 0,
+            "grade_reason": "주봉 데이터 부족으로 추세 확인 불가",
+        }
     current = frame.iloc[-1]
     previous = frame.iloc[-2] if len(frame) > 1 else current
 
     def value(key):
         return _number(current.get(key))
 
+    def previous_value(key):
+        return _number(previous.get(key))
+
     close, ma10, ma20 = value("종가"), value("MA10"), value("MA20")
+    prev_ma10, prev_ma20 = previous_value("MA10"), previous_value("MA20")
     rsi10, rsi14 = value("RSI10"), value("RSI14")
     macd, macd_signal = value("MACD"), value("MACD_SIGNAL")
     if any(item is None for item in (close, ma10, ma20, rsi10, rsi14, macd, macd_signal)):
         return {
             "ready": False,
             "reason": "주봉 지표 계산을 위한 완료된 주간 데이터가 더 필요합니다.",
-            "bars": len(frame),
+            "bars": len(frame), "trend": "데이터 부족", "grade": "C",
+            "grade_score": 0, "grade_reason": "주봉 지표 부족으로 추세 확인 불가",
         }
-    if close > ma10 and ma10 > ma20:
-        trend = "상승 우위"
-    elif close < ma10 and ma10 < ma20:
-        trend = "하락 압력"
-    else:
-        trend = "혼조"
+
+    above_ma10 = close > ma10
+    above_ma20 = close > ma20
+    ma10_above_ma20 = ma10 > ma20
+    ma10_rising = prev_ma10 is not None and ma10 > prev_ma10
+    ma20_rising = prev_ma20 is not None and ma20 > prev_ma20
+    macd_bullish = macd > macd_signal
+    rsi_bullish = rsi10 > rsi14
+
+    # Weekly trend is a grading input, not a hard exclusion. A weak trend
+    # remains visible as C so the user can distinguish it from a strong setup.
+    score = (
+        (20 if above_ma10 else 0)
+        + (15 if above_ma20 else 0)
+        + (20 if ma10_above_ma20 else 0)
+        + (15 if ma10_rising else 0)
+        + (10 if ma20_rising else 0)
+        + (15 if macd_bullish else 0)
+        + (5 if rsi_bullish else 0)
+    )
+    grade = "A" if score >= 80 else "B" if score >= 55 else "C"
+    trend = {
+        "A": "강한 상승 추세",
+        "B": "상승 전환·완만한 상승",
+        "C": "혼조·하락 추세",
+    }[grade]
+    reasons = []
+    for condition, label in (
+        (above_ma10, "주봉 종가 MA10 상회"),
+        (above_ma20, "주봉 종가 MA20 상회"),
+        (ma10_above_ma20, "MA10/20 정배열"),
+        (ma10_rising, "주봉 MA10 상승"),
+        (ma20_rising, "주봉 MA20 상승"),
+        (macd_bullish, "주봉 MACD 강세"),
+        (rsi_bullish, "RSI10 우위"),
+    ):
+        if condition:
+            reasons.append(label)
     return {
         "ready": True,
         "date": frame.index[-1].strftime("%Y-%m-%d"),
         "bars": len(frame),
         "trend": trend,
+        "grade": grade,
+        "grade_score": score,
+        "grade_reason": " · ".join(reasons) if reasons else "주봉 상승 조건 미충족",
         "close": _int(close),
         "ma10": ma10,
         "ma20": ma20,
-        "above_ma10": bool(close > ma10),
-        "above_ma20": bool(close > ma20),
+        "above_ma10": above_ma10,
+        "above_ma20": above_ma20,
+        "ma10_above_ma20": ma10_above_ma20,
+        "ma10_rising": ma10_rising,
+        "ma20_rising": ma20_rising,
         "rsi10": rsi10,
         "rsi14": rsi14,
-        "rsi10_rising": bool(rsi10 > _number(previous.get("RSI10"))) if _number(previous.get("RSI10")) is not None else None,
+        "rsi10_rising": bool(rsi10 > previous_value("RSI10")) if previous_value("RSI10") is not None else None,
         "macd": macd,
         "macd_signal": macd_signal,
-        "macd_bullish": bool(macd > macd_signal),
+        "macd_bullish": macd_bullish,
     }
 
 
