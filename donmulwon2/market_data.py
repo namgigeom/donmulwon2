@@ -26,15 +26,16 @@ class KrxDataProvider:
 
     @staticmethod
     def latest_trading_date(max_days: int = 14) -> str:
-        today = datetime.now()
-        for offset in range(max_days + 1):
-            candidate = (today - timedelta(days=offset)).strftime("%Y%m%d")
-            try:
-                tickers = stock.get_market_ticker_list(candidate, market="KOSPI")
-                if tickers:
-                    return candidate
-            except Exception:
-                continue
+        end = datetime.now()
+        start = end - timedelta(days=max(max_days, 30))
+        try:
+            frame = stock.get_index_ohlcv_by_date(
+                start.strftime("%Y%m%d"), end.strftime("%Y%m%d"), "1001"
+            )
+            if frame is not None and not frame.empty:
+                return frame.index[-1].strftime("%Y%m%d")
+        except Exception as exc:
+            raise RuntimeError(f"KRX 최근 거래일 조회 실패: {exc}") from exc
         raise RuntimeError("최근 거래일을 확인하지 못했습니다. KRX 응답을 확인하세요.")
 
     def index_history(self, index_code: str, days: int = 90) -> DataResult:
@@ -73,7 +74,8 @@ class KrxDataProvider:
     def investor_flows(self, market: str, date: str | None = None) -> DataResult:
         try:
             day = date or self.latest_trading_date()
-            frame = stock.get_market_trading_value_by_date(day, day, market)
+            frame = stock.get_market_trading_value_by_investor(day, day, market,
+                                                               etf=True, etn=True, elw=True)
             if frame is None or frame.empty:
                 return DataResult(False, message="투자자별 거래대금 데이터를 받지 못했습니다.")
             row = frame.iloc[-1]
