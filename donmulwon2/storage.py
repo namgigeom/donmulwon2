@@ -17,6 +17,13 @@ class AnalysisStore:
     def _connect(self):
         return sqlite3.connect(self.db_path)
 
+    def _purge_expired_analyses(self):
+        from datetime import timedelta
+
+        cutoff = (datetime.now() - timedelta(days=5)).isoformat(timespec="seconds")
+        with self._connect() as conn:
+            conn.execute("DELETE FROM analysis_history WHERE analyzed_at < ?", (cutoff,))
+
     def _initialize(self):
         with self._connect() as conn:
             conn.execute("""
@@ -40,6 +47,7 @@ class AnalysisStore:
                     UNIQUE(trading_date, market)
                 )
             """)
+        self._purge_expired_analyses()
 
     def save_analysis(self, ticker: str, name: str, trading_date: str, result: dict):
         with self._connect() as conn:
@@ -77,9 +85,8 @@ class AnalysisStore:
         """Return analyses from the last five days and purge expired rows."""
         from datetime import timedelta
 
-        cutoff = (datetime.now() - timedelta(days=5)).isoformat(timespec="seconds")
+        self._purge_expired_analyses()
         with self._connect() as conn:
-            conn.execute("DELETE FROM analysis_history WHERE analyzed_at < ?", (cutoff,))
             rows = conn.execute(
                 """SELECT analyzed_at, ticker, name, trading_date, matched, payload
                    FROM analysis_history ORDER BY id DESC LIMIT ?""",
