@@ -50,6 +50,7 @@ class AnalysisStore:
         self._purge_expired_analyses()
 
     def save_analysis(self, ticker: str, name: str, trading_date: str, result: dict):
+        self._purge_expired_analyses()
         with self._connect() as conn:
             conn.execute(
                 """INSERT INTO analysis_history
@@ -83,8 +84,6 @@ class AnalysisStore:
 
     def recent_analyses(self, limit: int = 100):
         """Return analyses from the last five days and purge expired rows."""
-        from datetime import timedelta
-
         self._purge_expired_analyses()
         with self._connect() as conn:
             rows = conn.execute(
