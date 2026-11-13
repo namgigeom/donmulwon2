@@ -58,6 +58,14 @@ class DonmulwonAnalyzer:
                 "volume_ma20": _number(last.get("VOLUME_MA20")),
                 "volume_ratio": _number(last.get("거래량")) / _number(last.get("VOLUME_MA20"))
                     if _number(last.get("거래량")) is not None and _number(last.get("VOLUME_MA20")) else None,
+                "atr14": _number(last.get("ATR14")),
+                "support20": _number(last.get("LOW20")),
+                "resistance20": _number(last.get("HIGH20")),
+                "high252": _number(last.get("HIGH252")),
+                "drawdown52w_pct": (
+                    (close / _number(last.get("HIGH252")) - 1) * 100
+                    if close and _number(last.get("HIGH252")) else None
+                ),
             },
             "ohlcv": _frame_records(frame.tail(260)),
         }
