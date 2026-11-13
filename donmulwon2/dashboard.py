@@ -168,7 +168,7 @@ class TechnicalChart(QWidget):
             p.drawPath(path)
 
         p.setPen(QColor("#d9b77d"))
-        p.drawText(QRectF(rsi_area.left(), rsi_area.top()-11, 70, 12), "RSI(10/14)")
+        p.drawText(QRectF(rsi_area.left(), rsi_area.top()-11, 70, 12), Qt.AlignmentFlag.AlignLeft, "RSI(10/14)")
         rsi_values = [r.get("RSI10") for r in rows]
         rsi_path = QPainterPath()
         started = False
@@ -186,7 +186,7 @@ class TechnicalChart(QWidget):
         p.drawLine(QPointF(rsi_area.left(), y50), QPointF(rsi_area.right(), y50))
 
         p.setPen(QColor("#d9b77d"))
-        p.drawText(QRectF(macd_area.left(), macd_area.top()-11, 80, 12), "MACD HIST")
+        p.drawText(QRectF(macd_area.left(), macd_area.top()-11, 80, 12), Qt.AlignmentFlag.AlignLeft, "MACD HIST")
         hist = [r.get("MACD_HIST") for r in rows]
         valid = [abs(float(v)) for v in hist if v is not None]
         max_abs = max(max(valid), 1e-9) if valid else 1
