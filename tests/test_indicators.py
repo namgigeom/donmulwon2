@@ -24,7 +24,7 @@ class IndicatorTests(unittest.TestCase):
         expected = {
             "RSI10", "RSI14", "MACD", "MACD_SIGNAL", "MACD_HIST",
             "MA10", "MA20", "MA60", "MA120", "MA240",
-            "BB_UPPER", "BB_MIDDLE", "BB_LOWER", "VOLUME_MA20",
+            "BB_UPPER", "BB_MIDDLE", "BB_LOWER", "VOLUME_MA10",
             "ATR14", "HIGH20", "LOW20", "HIGH252",
         }
         self.assertTrue(expected.issubset(frame.columns))
@@ -81,5 +81,5 @@ class VolumeMovingAverageTests(unittest.TestCase):
             "거래량": [100] * 10 + [200, 300],
         }, index=index)
         result = calculate_indicators(frame)
-        self.assertAlmostEqual(result.iloc[-1]["VOLUME_MA10"], 120.0)
+        self.assertAlmostEqual(result.iloc[-1]["VOLUME_MA10"], 130.0)
         self.assertNotIn("VOLUME_MA20", result.columns)
