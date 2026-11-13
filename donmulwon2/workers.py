@@ -28,6 +28,8 @@ class AnalysisWorker(QObject):
             elif self.task == "bulletin":
                 result = analyzer.market_bulletin(self.market)
                 self._emit_result(result)
+            elif self.task == "history":
+                self.finished.emit(analyzer.store.recent_analyses(limit=50))
             elif self.task == "dashboard":
                 markets = {}
                 errors = []
