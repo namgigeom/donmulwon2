@@ -342,3 +342,12 @@
 - 수정: 최근 거래일 확인과 지수 이력 조회에서 name_display=False를 지정해 불필요한 지수명 매핑 단계를 건너뛴다. 지수 OHLCV의 날짜·가격 데이터는 그대로 사용한다.
 - 테스트: 네트워크 없이 두 호출 모두 name_display=False를 전달하는지 확인하는 회귀 테스트 추가.
 - 검증: 코드 반영 완료. GitHub Actions 결과와 사용자 PC에서 KRX 실데이터 재조회는 후속 확인 필요.
+
+
+## 18. KRX 비JSON 응답 및 인증 설정 진단 보강
+- 날짜: 2026-11-14
+- 작업: `requirements.txt`, `.env.example`, `donmulwon2/market_data.py`, `tests/test_market_data.py`, `README.md`
+- 원인 조사: 앞선 `지수명` KeyError는 지수명 매핑 단계의 문제였지만, 현재 로그의 `Expecting value: line 1 column 1`은 KRX 응답 본문이 JSON이 아닌 상태다. pykrx 최신 문서는 인증이 필요한 KRX API에 `KRX_ID`, `KRX_PW` 환경변수를 요구한다고 안내한다. KRX 서버 장애·접속 제한 가능성도 남아 있다.
+- 변경: pykrx 의존성 최소 버전을 인증 설정을 포함한 `1.1.3.dev0` 이상으로 상향했다. `.env.example`에 KRX_ID/KRX_PW 항목을 추가하고, 인증정보가 없을 때 JSON 파싱 오류가 발생하면 사용자가 취할 조치를 API 오류 메시지에 표시한다. README에 로컬 .env 설정 및 비밀값 보호 절차를 기록했다.
+- 테스트: KRX 인증정보 누락 시 오류 안내가 반환되는 네트워크 없는 회귀 테스트를 추가했다. 기존 name_display=False 테스트도 유지한다.
+- 검증: GitHub 반영 완료. GitHub Actions 및 사용자 PC에서 KRX 인증 후 실데이터 연결은 별도 확인 필요. KRX 계정 없이 KRX 데이터가 복구됐다고 간주하지 않는다.
