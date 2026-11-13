@@ -27,3 +27,20 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
       - name: Import GUI modules
         run: python -c "from donmulwon2.dashboard import Dashboard, TechnicalChart; print('GUI imports OK')"
+      - name: Smoke test dashboard construction and paint
+        run: |
+          python - <<'PY'
+          from PySide6.QtWidgets import QApplication
+          from donmulwon2.dashboard import MainWindow
+
+          app = QApplication([])
+          window = MainWindow()
+          window.resize(1600, 900)
+          window.show()
+          app.processEvents()
+          screenshot = window.grab()
+          assert not screenshot.isNull(), "Dashboard screenshot is empty"
+          assert window.centralWidget().market_panel.isVisible()
+          window.close()
+          print("Dashboard construction and paint OK")
+          PY
