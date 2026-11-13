@@ -21,6 +21,13 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) { throw "Python dependency installation failed." }
 }
 
+Write-Host "Checking pykrx version required for authenticated KRX access..."
+& $VenvPython -c "from importlib.metadata import version; from packaging.version import Version; raise SystemExit(0 if Version(version('pykrx')) >= Version('1.1.3.dev0') else 1)"
+if ($LASTEXITCODE -ne 0) {
+    & $VenvPython -m pip install --upgrade "pykrx>=1.1.3.dev0"
+    if ($LASTEXITCODE -ne 0) { throw "pykrx upgrade failed. Check Python/pip network access." }
+}
+
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
     throw "Node.js/npm was not found. Install the current Node.js LTS version and run this script again."
 }
