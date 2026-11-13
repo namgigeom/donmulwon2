@@ -150,8 +150,14 @@ class DonmulwonAnalyzer:
                 if result.ok and result.data["matched"]:
                     latest = result.data.get("latest", {})
                     close, ma240 = latest.get("close"), latest.get("ma240")
-                    if ma240 is None or close is None or close >= ma240:
+                    if ma240 is None or close is None:
+                        errors.append({
+                            "ticker": ticker,
+                            "error": "종가 또는 MA240 데이터가 없어 240일선 필터 판정 불가",
+                        })
+                    elif close >= ma240:
                         matches.append(result.data)
+                    # 종가가 MA240 아래면 후보에 포함하지 않는다.
                 elif not result.ok:
                     errors.append({"ticker": ticker, "error": result.message})
                 if progress:
