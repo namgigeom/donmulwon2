@@ -55,7 +55,7 @@ def calculate_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     df["BB_LOWER"] = mid - 2 * std
 
     volume = pd.to_numeric(df.get("거래량", 0), errors="coerce")
-    df["VOLUME_MA20"] = volume.rolling(20, min_periods=1).mean()
+    df["VOLUME_MA10"] = volume.rolling(10, min_periods=1).mean()
     return df
 
 
@@ -115,5 +115,5 @@ def latest_signal(frame: pd.DataFrame) -> dict:
         "macd_signal": float(cur["MACD_SIGNAL"]),
         "close": int(cur["종가"]),
         "ma10": float(cur["MA10"]),
-        "volume_ratio": float(cur["거래량"] / cur["VOLUME_MA20"]) if cur["VOLUME_MA20"] else None,
+        "volume_ratio": float(cur["거래량"] / cur["VOLUME_MA10"]) if cur["VOLUME_MA10"] else None,
     }
