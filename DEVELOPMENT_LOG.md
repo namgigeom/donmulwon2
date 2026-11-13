@@ -311,3 +311,10 @@
 - 발견: CI에서 npm run build가 미사용 TrendingUp import 및 Boolean 변수만으로는 TypeScript가 좁히지 못하는 선택적 KOSPI/KOSDAQ 객체 접근을 보고했다.
 - 수정: 미사용 import 제거, 각 데이터 객체의 존재 여부를 직접 확인하는 조건식으로 합계 계산을 변경했다.
 - 검증: 수정 커밋 이후 신규 GitHub Actions 빌드 결과 대기 중.
+
+
+## 14. 단일 종목 분석 결과 패널 추가
+- 날짜: 2026-11-14
+- 작업: web/src/App.tsx, web/src/styles.css
+- 변경: 종목 조회 후 일봉 필수 신호 3개 각각의 충족/미충족 상태와 ATR 기반 진입 참고 구간·손절·2R/3R 목표가를 차트 아래에 표시한다. ATR 산출 불가 시 숫자를 임의 표시하지 않고 데이터 부족으로 안내한다.
+- 검증: 이전 CI 실행(535e83c)에서 TypeScript/Vite 빌드가 성공했다. 이번 추가 UI 변경분의 CI는 새 실행 결과 확인 필요.
