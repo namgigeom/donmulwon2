@@ -6,7 +6,17 @@
 
 React + TypeScript + Vite 기반 웹 프론트엔드는 `web/`에서 개발합니다. 기존 Python/PySide6 분석 앱은 보존하며, 웹 버전이 기능 검증을 통과하기 전까지 삭제하지 않습니다.
 
-### 웹 프론트엔드 실행
+### 웹 프론트엔드 및 API 실행
+
+터미널 1에서 Python API를 실행합니다.
+
+```powershell
+# 저장소 루트에서
+pip install -r requirements.txt
+uvicorn donmulwon2.api:app --reload --host 127.0.0.1 --port 8000
+```
+
+터미널 2에서 React 웹사이트를 실행합니다.
 
 ```powershell
 cd web
@@ -14,9 +24,9 @@ npm install
 npm run dev
 ```
 
-브라우저에서 `http://localhost:5173`을 엽니다.
+브라우저에서 `http://localhost:5173`을 엽니다. API 상태 확인은 `http://127.0.0.1:8000/api/health`, API 문서는 `http://127.0.0.1:8000/docs`입니다.
 
-현재 단계는 화면 골격 제작 단계입니다. 시장 시세, OpenRouter, 토스증권 API는 아직 웹 화면에 연결되지 않았으며, 연결 전에는 실제 데이터인 것처럼 보이는 임의 숫자를 표시하지 않습니다.
+현재 API는 기존 Python 분석 엔진을 웹에서 호출할 수 있도록 연결하는 초기 단계입니다. KRX 시장 게시판, 개별 종목 분석, KOSPI/KOSDAQ 스캔 엔드포인트를 제공합니다. OpenRouter와 토스증권 API는 아직 연결되지 않았으며, 연결 전에는 실제 데이터처럼 보이는 임의 숫자를 표시하지 않습니다.
 
 ## 실행 환경
 - Windows 10/11
