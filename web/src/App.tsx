@@ -49,7 +49,7 @@ type MarketBulletin = {
   sectors?: { name: string; change_pct: number; stock_count: number; market: string }[];
 };
 
-type MarketCode = "KOSPI" | "KOSDAQ";
+type MarketCode = "ALL" | "KOSPI" | "KOSDAQ";
 type Candle = {
   date: string;
   "시가": number | null; "고가": number | null; "저가": number | null; "종가": number | null;
@@ -162,16 +162,25 @@ function App() {
   const apiBase = "http://" + window.location.hostname + ":8000";
   const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
-  const [scanMarket, setScanMarket] = useState<MarketCode>("KOSPI");
+  const [scanMarket, setScanMarket] = useState<MarketCode>("ALL");
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [scanProgress, setScanProgress] = useState<ScanJob | null>(null);
+  const analystWorking = scanLoading || stockLoading;
+  const analystStatus = scanLoading ? "FULL MARKET SCAN" : stockLoading ? "STOCK ANALYSIS" : "STANDBY";
+  const analystCaption = scanLoading
+    ? (scanProgress && scanProgress.total > 0
+      ? `전 종목 분석 중 · ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")}`
+      : "국내 전체 종목 목록을 불러오는 중입니다.")
+    : stockLoading ? "선택한 종목의 차트와 지표를 분석 중입니다."
+      : scanResult ? `분석 완료 · ${scanResult.scanned.toLocaleString("ko-KR")}종목 확인`
+      : "대기 중 · 스캔을 시작하면 분석을 진행합니다.";
 
   async function runMarketScan() {
     setScanLoading(true); setScanError(""); setScanResult(null); setScanProgress(null);
     try {
-      const start = await fetch(apiBase + "/api/scan/" + scanMarket + "?limit=3000", { method: "POST" });
+      const start = await fetch(apiBase + "/api/scan/" + scanMarket, { method: "POST" });
       const started = await start.json();
       if (!start.ok) throw new Error(started.detail || "시장 스캔을 시작하지 못했습니다.");
       const jobId = String(started.job_id || "");
@@ -374,7 +383,7 @@ function App() {
             <article className="office-scene panel">
               <div className="section-heading">
                 <div><span className="section-kicker">THE ANALYST ROOM</span><h2>너구리의 분석실</h2></div>
-                <span className="live-label"><i /> STANDBY</span>
+                <span className={analystWorking ? "live-label working" : "live-label"}><i /> {analystStatus}</span>
               </div>
 
               <div className="office-window">
@@ -392,11 +401,11 @@ function App() {
 
               <div className="desk-area">
                 <div className="desk-lamp"><span /></div>
-                <div className="desk-character">
-                  <div className="character-status"><i /> ANALYST AVAILABLE</div>
-                  <div className="character-placeholder" aria-label="너구리 캐릭터 에셋 연결 예정">🦝</div>
+                <div className={analystWorking ? "desk-character working" : "desk-character"}>
+                  <div className="character-status"><i /> {analystWorking ? "ANALYST WORKING" : scanResult ? "ANALYSIS COMPLETE" : "ANALYST READY"}</div>
+                  <div className="character-placeholder" aria-label="분석 상태에 따라 움직이는 너구리 분석가">🦝<span className="character-work-effect">⌨</span></div>
                   <div className="character-name">너구리 <span>CHIEF ANALYST</span></div>
-                  <div className="character-caption">시장 데이터를 기다리는 중입니다.</div>
+                  <div className="character-caption">{analystCaption}</div>
                 </div>
                 <div className="desk-surface">
                   <div className="desk-monitor"><div /><div /><div /></div>
@@ -501,11 +510,12 @@ function App() {
               <div><span className="section-kicker">RULE-BASED DISCOVERY</span><h2>시장 스캐너</h2></div>
               <span className="single-agent">DAILY SIGNAL · CLOSE CONFIRMED</span>
             </div>
-            <p className="scanner-intro">일봉 필수 조건 3개를 모두 충족한 종목만 후보로 표시합니다. 주봉은 추세 참고용이며, 240일선 아래는 자동 제외하지 않고 위험으로 표시합니다.</p>
+            <p className="scanner-intro">일봉 필수 조건 3개를 모두 충족한 종목만 후보로 표시합니다. 주봉은 추세 참고용이며, 240일선 아래 종목은 후보에서 제외합니다.</p>
             <div className="scanner-toolbar">
               <div className="period-toggle">
-                <button type="button" className={scanMarket === "KOSPI" ? "selected" : ""} onClick={() => setScanMarket("KOSPI")}>KOSPI</button>
-                <button type="button" className={scanMarket === "KOSDAQ" ? "selected" : ""} onClick={() => setScanMarket("KOSDAQ")}>KOSDAQ</button>
+                <button type="button" className={scanMarket === "ALL" ? "selected" : ""} onClick={() => setScanMarket("ALL")}>전체 시장</button>
+                <button type="button" className={scanMarket === "KOSPI" ? "selected" : ""} onClick={() => setScanMarket("KOSPI")}>코스피</button>
+                <button type="button" className={scanMarket === "KOSDAQ" ? "selected" : ""} onClick={() => setScanMarket("KOSDAQ")}>코스닥</button>
               </div>
               <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "선택 시장 스캔 시작"}</button>
               {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 후보 {scanResult.matches.length}개 · 오류 {scanResult.error_count}건</span>}
@@ -515,7 +525,7 @@ function App() {
             {scanResult && <div className="scanner-table-wrap">
               {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다.</div> :
               <table className="scanner-table">
-                <thead><tr><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 20일 평균</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 위험</th><th></th></tr></thead>
+                <thead><tr><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 위험</th><th></th></tr></thead>
                 <tbody>{scanResult.matches.map((item) => {
                   const below240 = typeof item.latest?.ma240 === "number" && typeof item.latest?.close === "number" && item.latest.close < item.latest.ma240;
                   return <tr key={item.ticker}>
