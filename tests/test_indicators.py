@@ -25,6 +25,7 @@ class IndicatorTests(unittest.TestCase):
             "RSI10", "RSI14", "MACD", "MACD_SIGNAL", "MACD_HIST",
             "MA10", "MA20", "MA60", "MA120", "MA240",
             "BB_UPPER", "BB_MIDDLE", "BB_LOWER", "VOLUME_MA20",
+            "ATR14", "HIGH20", "LOW20", "HIGH252",
         }
         self.assertTrue(expected.issubset(frame.columns))
         self.assertAlmostEqual(frame.iloc[-1]["RSI10"], 100.0, places=6)
