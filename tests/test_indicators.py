@@ -65,3 +65,21 @@ class IndicatorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VolumeMovingAverageTests(unittest.TestCase):
+    def test_volume_average_uses_ten_sessions(self):
+        import pandas as pd
+        from donmulwon2.indicators import calculate_indicators
+
+        index = pd.date_range("2026-01-01", periods=12, freq="B")
+        frame = pd.DataFrame({
+            "시가": range(100, 112),
+            "고가": range(101, 113),
+            "저가": range(99, 111),
+            "종가": range(100, 112),
+            "거래량": [100] * 10 + [200, 300],
+        }, index=index)
+        result = calculate_indicators(frame)
+        self.assertAlmostEqual(result.iloc[-1]["VOLUME_MA10"], 120.0)
+        self.assertNotIn("VOLUME_MA20", result.columns)
