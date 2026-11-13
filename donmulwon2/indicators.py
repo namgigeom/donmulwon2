@@ -35,6 +35,19 @@ def calculate_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     for period in (10, 20, 60, 120, 240):
         df[f"MA{period}"] = close.rolling(period, min_periods=period).mean()
 
+    high = pd.to_numeric(df["고가"], errors="coerce")
+    low = pd.to_numeric(df["저가"], errors="coerce")
+    previous_close = close.shift(1)
+    true_range = pd.concat([
+        high - low,
+        (high - previous_close).abs(),
+        (low - previous_close).abs(),
+    ], axis=1).max(axis=1)
+    df["ATR14"] = true_range.rolling(14, min_periods=14).mean()
+    df["HIGH20"] = high.rolling(20, min_periods=20).max()
+    df["LOW20"] = low.rolling(20, min_periods=20).min()
+    df["HIGH252"] = high.rolling(252, min_periods=20).max()
+
     mid = close.rolling(20, min_periods=20).mean()
     std = close.rolling(20, min_periods=20).std(ddof=0)
     df["BB_UPPER"] = mid + 2 * std
