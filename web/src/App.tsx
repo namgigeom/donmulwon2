@@ -298,6 +298,7 @@ function App() {
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") return;
         setApiStatus("Python API 연결 실패");
+        setRaccoonNote({ status: "error", error: "시장 데이터를 불러오지 못해 AI 분석을 중단했습니다." });
       }
     }
 
