@@ -54,7 +54,7 @@ class DonmulwonAnalyzer:
             "signal": signal,
             "matched": bool(signal.get("matched")),
             "weekly": weekly_summary,
-            "weekly_ohlcv": _frame_records(weekly_indicators.tail(26)),
+            "weekly_ohlcv": _frame_records(weekly_indicators.tail(52)),
             "latest": {
                 "close": _int(last.get("종가")),
                 "change_pct": change_pct,
