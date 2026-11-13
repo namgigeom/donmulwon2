@@ -77,8 +77,8 @@ class DonmulwonAnalyzer:
             self.store.save_analysis(ticker, name, date, result)
         return DataResult(True, result, "분석 완료")
 
-    def market_bulletin(self, market: str) -> DataResult:
-        breadth = self.provider.market_breadth(market)
+    def market_bulletin(self, market: str, date: str | None = None) -> DataResult:
+        breadth = self.provider.market_breadth(market, date)
         if not breadth.ok:
             return breadth
         flows = self.provider.investor_flows(market, breadth.data["date"])
