@@ -564,7 +564,7 @@ function App() {
                 <tbody>{(["A", "B", "C"] as const).map((grade) => {
                   const group = scanResult.matches.filter((item) => (item.weekly?.grade ?? "C") === grade);
                   if (group.length === 0) return null;
-                  const groupTitle = grade === "A" ? "적극 매수 검토" : grade === "B" ? "매수 추천" : "매수 보류";
+                  const groupTitle = grade === "A" ? "매수 매우 추천" : grade === "B" ? "매수 추천" : "매수 보류";
                   return <Fragment key={grade}>
                     <tr className={`grade-divider grade-divider-${grade.toLowerCase()}`}><td colSpan={10}><b>{grade}등급 · {groupTitle}</b><span>{group.length}종목</span></td></tr>
                     {group.map((item) => {
