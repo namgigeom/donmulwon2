@@ -17,7 +17,9 @@ class DonmulwonAnalyzer:
         self.provider = provider or KrxDataProvider()
         self.store = store or AnalysisStore()
 
-    def analyze_ticker(self, ticker: str) -> DataResult:
+    def analyze_ticker(
+        self, ticker: str, *, save: bool = True, include_ohlcv: bool = True
+    ) -> DataResult:
         history = self.provider.ticker_history(ticker, days=420)
         if not history.ok:
             return history
@@ -67,9 +69,11 @@ class DonmulwonAnalyzer:
                     if close and _number(last.get("HIGH252")) else None
                 ),
             },
-            "ohlcv": _frame_records(frame.tail(260)),
         }
-        self.store.save_analysis(ticker, name, date, result)
+        if include_ohlcv:
+            result["ohlcv"] = _frame_records(frame.tail(260))
+        if save:
+            self.store.save_analysis(ticker, name, date, result)
         return DataResult(True, result, "분석 완료")
 
     def market_bulletin(self, market: str) -> DataResult:
@@ -108,7 +112,7 @@ class DonmulwonAnalyzer:
             matches, errors = [], []
             total = len(tickers)
             for index, ticker in enumerate(tickers, start=1):
-                result = self.analyze_ticker(ticker)
+                result = self.analyze_ticker(ticker, save=False, include_ohlcv=False)
                 if result.ok and result.data["matched"]:
                     matches.append(result.data)
                 elif not result.ok:
