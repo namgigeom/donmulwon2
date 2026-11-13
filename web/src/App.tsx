@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import {
   Activity,
   ArrowDownRight,
+  ArrowUpRight,
   BarChart3,
   Bell,
   BookOpen,
@@ -44,6 +45,8 @@ type MarketBulletin = {
   unchanged: number;
   ticker_count: number;
   trading_value: number;
+  index?: { name: string; close: number; change: number; change_pct: number; trend: number[] } | null;
+  sectors?: { name: string; change_pct: number; stock_count: number; market: string }[];
 };
 
 type MarketCode = "KOSPI" | "KOSDAQ";
@@ -259,6 +262,9 @@ function App() {
   const totalAdvancers = kospi && kosdaq ? kospi.advancers + kosdaq.advancers : undefined;
   const totalDecliners = kospi && kosdaq ? kospi.decliners + kosdaq.decliners : undefined;
   const totalTradingValue = kospi && kosdaq ? kospi.trading_value + kosdaq.trading_value : undefined;
+  const sectors = [ ...(kospi?.sectors ?? []), ...(kosdaq?.sectors ?? []) ];
+  const strongestSectors = [...sectors].sort((a, b) => b.change_pct - a.change_pct).filter((item) => item.change_pct > 0).slice(0, 5);
+  const weakestSectors = [...sectors].sort((a, b) => a.change_pct - b.change_pct).filter((item) => item.change_pct < 0).slice(0, 5);
 
   return (
     <main className="app-shell">
@@ -328,20 +334,34 @@ function App() {
           </section>
 
           <section className="market-grid" aria-label="시장 요약">
-            <article className="market-card">
-              <div className="card-top"><span>KOSPI</span><span className="market-tag">종합지수</span></div>
-              <div className="market-value market-stat">{kospi ? `상승 ${formatCount(kospi.advancers)} / 하락 ${formatCount(kospi.decliners)}` : "데이터 연결 대기"}</div>
-              <div className="market-foot"><span>{kospi ? `기준일 ${kospi.date}` : "시장 데이터"}</span><span className="neutral-label">{kospi ? "수신" : "미수신"}</span></div>
-            </article>
-            <article className="market-card">
-              <div className="card-top"><span>KOSDAQ</span><span className="market-tag">기술주 시장</span></div>
-              <div className="market-value market-stat">{kosdaq ? `상승 ${formatCount(kosdaq.advancers)} / 하락 ${formatCount(kosdaq.decliners)}` : "데이터 연결 대기"}</div>
-              <div className="market-foot"><span>{kosdaq ? `기준일 ${kosdaq.date}` : "시장 데이터"}</span><span className="neutral-label">{kosdaq ? "수신" : "미수신"}</span></div>
-            </article>
+            {([["KOSPI", "코스피", kospi], ["KOSDAQ", "코스닥", kosdaq]] as const).map(([code, label, data]) => {
+              const index = data?.index;
+              const rising = (index?.change_pct ?? 0) > 0;
+              const falling = (index?.change_pct ?? 0) < 0;
+              const values = index?.trend ?? [];
+              const min = Math.min(...values, 0), max = Math.max(...values, 1);
+              const points = values.map((value, i) => `${8 + i * (84 / Math.max(values.length - 1, 1))},${28 - ((value - min) / (max - min || 1)) * 22}`).join(" ");
+              return <article className="market-card" key={code}>
+                <div className="card-top"><span>{label}</span><span className="market-tag">종합지수</span></div>
+                <div className="index-main">
+                  <div>
+                    <div className="index-close">{index ? index.close.toLocaleString("ko-KR", { maximumFractionDigits: 2 }) : "데이터 대기"}</div>
+                    <div className={rising ? "index-change positive" : falling ? "index-change negative" : "index-change neutral"}>
+                      {rising ? <ArrowUpRight size={15} /> : falling ? <ArrowDownRight size={15} /> : <span>—</span>}
+                      {index ? `${index.change > 0 ? "+" : ""}${index.change.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} (${index.change_pct > 0 ? "+" : ""}${index.change_pct.toFixed(2)}%)` : "등락률 미수신"}
+                    </div>
+                  </div>
+                  <svg className={rising ? "index-sparkline positive" : falling ? "index-sparkline negative" : "index-sparkline"} viewBox="0 0 100 32" role="img" aria-label={`${label} 최근 지수 흐름`}>
+                    {values.length > 1 && <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
+                  </svg>
+                </div>
+                <div className="market-foot"><span>{data ? `상승 ${formatCount(data.advancers)} / 하락 ${formatCount(data.decliners)} · ${data.date}` : "시장 데이터"}</span><span className="neutral-label">{index ? "수신" : "미수신"}</span></div>
+              </article>;
+            })}
             <article className="market-card accent-card">
-              <div className="card-top"><span>MARKET BREADTH</span><Activity size={16} /></div>
+              <div className="card-top"><span>시장 상승·하락 종목 수</span><Activity size={16} /></div>
               <div className="market-value">{formatCount(totalAdvancers)} <small>/ {formatCount(totalDecliners)}</small></div>
-              <div className="market-foot"><span>전체 상승 / 하락 종목</span><span className="neutral-label">{bothMarketsReady ? "수신" : "미수신"}</span></div>
+              <div className="market-foot"><span>코스피 + 코스닥 · 상승 / 하락</span><span className="neutral-label">{bothMarketsReady ? "수신" : "미수신"}</span></div>
             </article>
             <article className="market-card">
               <div className="card-top"><span>TRADING VALUE</span><BarChart3 size={16} /></div>
@@ -417,12 +437,12 @@ function App() {
                 </div>}
                 <div className="sector-watch-grid">
                   <section className="sector-watch-card">
-                    <div className="sector-watch-title"><span><Flame size={15} /> 오늘의 강세 업종</span><small>TOP SECTORS</small></div>
-                    <div className="sector-empty">업종별 등락 데이터 연결 후 표시</div>
+                    <div className="sector-watch-title"><span><Flame size={15} /> 오늘의 강세 업종</span><small>상승률 상위</small></div>
+                    {strongestSectors.length ? <ul className="sector-list">{strongestSectors.map((sector) => <li key={sector.market + sector.name}><span>{sector.name}<small>{sector.market === "KOSPI" ? "코스피" : "코스닥"} · {sector.stock_count}종목 평균</small></span><b className="positive">+{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="sector-empty">업종 데이터 수신 대기 또는 상승 업종 없음</div>}
                   </section>
                   <section className="sector-watch-card">
-                    <div className="sector-watch-title"><span><ShieldAlert size={15} /> 오늘의 약세 업종</span><small>WEAK SECTORS</small></div>
-                    <div className="sector-empty">업종별 등락 데이터 연결 후 표시</div>
+                    <div className="sector-watch-title"><span><ShieldAlert size={15} /> 오늘의 약세 업종</span><small>하락률 상위</small></div>
+                    {weakestSectors.length ? <ul className="sector-list">{weakestSectors.map((sector) => <li key={sector.market + sector.name}><span>{sector.name}<small>{sector.market === "KOSPI" ? "코스피" : "코스닥"} · {sector.stock_count}종목 평균</small></span><b className="negative">{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="sector-empty">업종 데이터 수신 대기 또는 하락 업종 없음</div>}
                   </section>
                 </div>
                 <div className="market-one-line">
