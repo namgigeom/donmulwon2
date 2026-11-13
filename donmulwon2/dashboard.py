@@ -18,6 +18,13 @@ from .workers import AnalysisWorker
 
 CANVAS_W, CANVAS_H = 1672, 941
 
+# The first six source poses show Neoburi seated at the desk. Keep this loop
+# separate from the later standing/reading/drinking poses until a state machine
+# is added for those actions.
+CHARACTER_RECT = QRectF(72, 390, 344, 154)
+CHARACTER_DESK_FRAMES = tuple(range(1, 7))
+CHARACTER_FRAME_INTERVAL_MS = 850
+
 
 def _fmt_num(value, digits=2):
     try:
@@ -50,6 +57,12 @@ class Dashboard(QWidget):
         self.image = QPixmap(str(image_path))
         if self.image.isNull():
             raise RuntimeError(f"메인 이미지 읽기 실패: {image_path}")
+        self.character_frames = self._load_character_frames()
+        self.character_frame_index = 0
+        self.character_timer = QTimer(self)
+        self.character_timer.timeout.connect(self._advance_character_frame)
+        if self.character_frames:
+            self.character_timer.start(CHARACTER_FRAME_INTERVAL_MS)
         self.setMinimumSize(1000, 563)
         self.setMouseTracking(True)
         self._busy = False
@@ -69,6 +82,26 @@ class Dashboard(QWidget):
         self.refresh_timer.setSingleShot(True)
         self.refresh_timer.timeout.connect(self._refresh_market)
         self.refresh_timer.start(500)
+
+    def _load_character_frames(self):
+        """Load the six desk-idle poses extracted from the 4x5 source sheet."""
+        frames_dir = Path(__file__).resolve().parent.parent / "assets" / "characters" / "neoburi" / "frames"
+        frames = []
+        for number in CHARACTER_DESK_FRAMES:
+            path = frames_dir / f"pose_{number:02d}.png"
+            if not path.is_file():
+                return []
+            pixmap = QPixmap(str(path))
+            if pixmap.isNull():
+                return []
+            frames.append(pixmap)
+        return frames
+
+    def _advance_character_frame(self):
+        if not self.character_frames:
+            return
+        self.character_frame_index = (self.character_frame_index + 1) % len(self.character_frames)
+        self.update()
 
     # ---- pixel-art painting helpers -------------------------------------------------
     def _font(self, size=16, bold=False, family="Malgun Gothic"):
@@ -190,6 +223,13 @@ class Dashboard(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         self._draw_background(p)
+        if self.character_frames:
+            p.save()
+            p.translate(self._offset[0], self._offset[1])
+            p.scale(self._scale, self._scale)
+            p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
+            p.drawPixmap(CHARACTER_RECT, self.character_frames[self.character_frame_index], QRectF(self.character_frames[self.character_frame_index].rect()))
+            p.restore()
         ox, oy = self._offset
         p.save()
         p.translate(ox, oy)
