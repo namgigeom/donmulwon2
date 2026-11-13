@@ -7,7 +7,7 @@ import math
 import pandas as pd
 from pykrx import stock
 
-from .indicators import calculate_indicators, latest_signal
+from .indicators import calculate_indicators, latest_signal, resample_weekly_ohlcv
 from .market_data import DataResult, KrxDataProvider
 from .storage import AnalysisStore
 
@@ -28,6 +28,9 @@ class DonmulwonAnalyzer:
         if frame.empty:
             return DataResult(False, message="지표 계산 결과가 비어 있습니다.")
         signal = latest_signal(history.data)
+        weekly_frame = resample_weekly_ohlcv(history.data)
+        weekly_indicators = calculate_indicators(weekly_frame)
+        weekly_summary = _weekly_summary(weekly_indicators)
         date = frame.index[-1].strftime("%Y%m%d")
         name = name or self.provider.ticker_name(ticker)
         last = frame.iloc[-1]
@@ -41,6 +44,8 @@ class DonmulwonAnalyzer:
             "trading_date": date,
             "signal": signal,
             "matched": bool(signal.get("matched")),
+            "weekly": weekly_summary,
+            "weekly_ohlcv": _frame_records(weekly_indicators.tail(52)),
             "latest": {
                 "close": _int(last.get("종가")),
                 "change_pct": change_pct,
@@ -141,6 +146,51 @@ class DonmulwonAnalyzer:
             }, "종목 검색 완료")
         except Exception as exc:
             return DataResult(False, message=f"시장 종목 검색 실패: {exc}")
+
+
+
+def _weekly_summary(frame: pd.DataFrame) -> dict:
+    """Summarize the last completed weekly candle as context, not a scan filter."""
+    if frame is None or frame.empty:
+        return {"ready": False, "reason": "완료된 주봉 데이터가 부족합니다."}
+    current = frame.iloc[-1]
+    previous = frame.iloc[-2] if len(frame) > 1 else current
+
+    def value(key):
+        return _number(current.get(key))
+
+    close, ma10, ma20 = value("종가"), value("MA10"), value("MA20")
+    rsi10, rsi14 = value("RSI10"), value("RSI14")
+    macd, macd_signal = value("MACD"), value("MACD_SIGNAL")
+    if any(item is None for item in (close, ma10, ma20, rsi10, rsi14, macd, macd_signal)):
+        return {
+            "ready": False,
+            "reason": "주봉 지표 계산을 위한 완료된 주간 데이터가 더 필요합니다.",
+            "bars": len(frame),
+        }
+    if close > ma10 and ma10 > ma20:
+        trend = "상승 우위"
+    elif close < ma10 and ma10 < ma20:
+        trend = "하락 압력"
+    else:
+        trend = "혼조"
+    return {
+        "ready": True,
+        "date": frame.index[-1].strftime("%Y-%m-%d"),
+        "bars": len(frame),
+        "trend": trend,
+        "close": _int(close),
+        "ma10": ma10,
+        "ma20": ma20,
+        "above_ma10": bool(close > ma10),
+        "above_ma20": bool(close > ma20),
+        "rsi10": rsi10,
+        "rsi14": rsi14,
+        "rsi10_rising": bool(rsi10 > _number(previous.get("RSI10"))) if _number(previous.get("RSI10")) is not None else None,
+        "macd": macd,
+        "macd_signal": macd_signal,
+        "macd_bullish": bool(macd > macd_signal),
+    }
 
 
 def _number(value):
