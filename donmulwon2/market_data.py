@@ -91,6 +91,53 @@ class KrxDataProvider:
         except Exception as exc:
             return DataResult(False, message=f"{market} 시장 통계 수집 실패: {exc}")
 
+    def index_snapshot(self, market: str, date: str | None = None) -> DataResult:
+        """Return the latest index close, daily move and a short close-price sparkline."""
+        try:
+            day = date or self.latest_trading_date()
+            index_code = {"KOSPI": "1001", "KOSDAQ": "2001"}[market.upper()]
+            end = datetime.strptime(day, "%Y%m%d")
+            start = end - timedelta(days=18)
+            frame = stock.get_index_ohlcv_by_date(
+                start.strftime("%Y%m%d"), day, index_code, name_display=False,
+            )
+            if frame is None or frame.empty or "종가" not in frame.columns:
+                return DataResult(False, message=f"{market} 지수 종가 데이터가 비어 있습니다.")
+            closes = pd.to_numeric(frame["종가"], errors="coerce").dropna()
+            if closes.empty:
+                return DataResult(False, message=f"{market} 지수 종가를 확인할 수 없습니다.")
+            current = float(closes.iloc[-1])
+            previous = float(closes.iloc[-2]) if len(closes) > 1 else current
+            change = current - previous
+            change_pct = (change / previous * 100) if previous else 0.0
+            return DataResult(True, {
+                "name": market, "close": current, "change": change,
+                "change_pct": change_pct, "trend": [float(value) for value in closes.tail(7)],
+            }, "KRX 지수 종가")
+        except Exception as exc:
+            return DataResult(False, message=f"{market} 지수 조회 실패: {exc}")
+
+    def sector_performance(self, market: str, date: str | None = None) -> DataResult:
+        """Aggregate constituent returns by KRX industry classification."""
+        try:
+            day = date or self.latest_trading_date()
+            frame = stock.get_market_sector_classifications(day, market=market.upper())
+            required = {"업종명", "등락률"}
+            if frame is None or frame.empty or not required.issubset(frame.columns):
+                return DataResult(False, message=f"{market} 업종별 등락 데이터가 비어 있거나 형식이 다릅니다.")
+            work = frame[["업종명", "등락률"]].copy()
+            work["등락률"] = pd.to_numeric(work["등락률"], errors="coerce")
+            work = work.dropna(subset=["업종명", "등락률"])
+            grouped = work.groupby("업종명")["등락률"].agg(["mean", "count"]).reset_index()
+            sectors = [
+                {"name": str(row["업종명"]), "change_pct": round(float(row["mean"]), 2),
+                 "stock_count": int(row["count"]), "market": market.upper()}
+                for _, row in grouped.iterrows()
+            ]
+            return DataResult(True, sectors, "KRX 업종 구성 종목 평균 등락률")
+        except Exception as exc:
+            return DataResult(False, message=f"{market} 업종별 등락 수집 실패: {exc}")
+
     def investor_flows(self, market: str, date: str | None = None) -> DataResult:
         try:
             day = date or self.latest_trading_date()
