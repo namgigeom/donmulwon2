@@ -1,7 +1,6 @@
 import {
   Activity,
   ArrowDownRight,
-  ArrowUpRight,
   BarChart3,
   Bell,
   BookOpen,
