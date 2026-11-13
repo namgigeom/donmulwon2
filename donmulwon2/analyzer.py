@@ -92,9 +92,18 @@ class DonmulwonAnalyzer:
             tone = "하락 종목 우세"
         else:
             tone = "상승·하락 종목 비슷"
+        flow_values = (data.get("investor_flows") or {}).get("values", {})
+        flow_parts = []
+        for investor in ("외국인", "개인"):
+            if investor in flow_values:
+                flow_parts.append(
+                    f'{investor} {flow_values[investor] / 100_000_000:+.0f}억'
+                )
+        flow_summary = ", ".join(flow_parts)
         data["one_line_summary"] = (
             f'{market}: {tone} (상승 {adv:,} / 하락 {dec:,}), '
             f'거래대금 {data["trading_value"]:,}원'
+            + (f', {flow_summary}' if flow_summary else '')
         )
         self.store.save_bulletin(data["date"], market, data)
         return DataResult(True, data, "시장 게시판 갱신")
