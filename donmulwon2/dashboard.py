@@ -277,14 +277,15 @@ class Dashboard(QWidget):
 
     def _paint_scan_results(self, p):
         # Keep the original panel art and its progress-bar frame.
-        self._dark_patch(p, (490, 773, 410, 95), 401)
+        self._dark_patch(p, (490, 773, 410, 47), 401)
+        self._dark_patch(p, (490, 853, 410, 22), 402)
         if self._busy and self.progress[1]:
             current, total, ticker = self.progress
             pct = current/total
             status = f"전 종목 검사 중  {current:,}/{total:,}  ({pct*100:.0f}%)"
             self._text(p, 510, 802, status, 16, "#f4e8d5", True)
             self._text(p, 510, 827, ticker, 12, "#c7c3d0")
-            p.fillRect(QRectF(511, 837, 350*pct, 15), QColor("#61bd78"))
+            p.fillRect(QRectF(514, 829, 350*pct, 17), QColor("#61bd78"))
         elif self.scan_data:
             matches = self.scan_data.get("matches", [])
             self._text(p, 510, 801, f'검색 {self.scan_data.get("scanned", 0):,}종목 · 조건 충족 {len(matches)}종목',
