@@ -1,6 +1,7 @@
 """Network-free regression tests for KRX market data adapters."""
 import unittest
 from unittest.mock import patch
+import os
 
 import pandas as pd
 
@@ -18,6 +19,12 @@ class KrxIndexLookupTests(unittest.TestCase):
 
         self.assertEqual(result, "20261113")
         self.assertIs(get_index.call_args.kwargs["name_display"], False)
+
+    @patch.dict(os.environ, {"KRX_ID": "", "KRX_PW": ""})
+    @patch("donmulwon2.market_data.stock.get_index_ohlcv_by_date", side_effect=ValueError("Expecting value: line 1 column 1"))
+    def test_missing_krx_credentials_get_actionable_error(self, get_index):
+        with self.assertRaisesRegex(RuntimeError, "KRX_ID와 KRX_PW"):
+            KrxDataProvider.latest_trading_date()
 
     @patch("donmulwon2.market_data.stock.get_index_ohlcv_by_date")
     def test_index_history_disables_broken_index_name_mapping(self, get_index):
