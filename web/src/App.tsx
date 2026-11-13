@@ -133,7 +133,7 @@ function PriceChart({ bars }: { bars: Candle[] }) {
     <div className="chart-panel-title subchart-title"><b>MACD (5, 10, 9)</b><span>MACD · Signal · Histogram</span></div>
     <svg className="technical-svg indicator-svg" viewBox={`0 0 ${width} 120`} role="img" aria-label="MACD 보조지표">
       <line x1={left} x2={width-right} y1={75} y2={75} className="zero-line"/>
-      {rows.map((bar,i)=>{const v=numeric(bar.MACD_HIST)??0, y=macdY(v), zero=macdY(0);return <rect key={bar.date} x={xAt(i)-candleWidth/2} y={Math.min(y,zero)} width={candleWidth} height={Math.max(1,Math.abs(zero-y))} className={v>=0?"macd-positive":"macd-negative"/>;})}
+      {rows.map((bar,i)=>{const v=numeric(bar.MACD_HIST)??0, y=macdY(v), zero=macdY(0);return <rect key={bar.date} x={xAt(i)-candleWidth/2} y={Math.min(y,zero)} width={candleWidth} height={Math.max(1,Math.abs(zero-y))} className={v>=0?"macd-positive":"macd-negative"}/>;})}
       <path d={linePath("MACD",macdY)} className="indicator-line macd-line"/>
       <path d={linePath("MACD_SIGNAL",macdY)} className="indicator-line signal-line"/>
     </svg>
