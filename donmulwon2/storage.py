@@ -38,6 +38,15 @@ class AnalysisStore:
                 )
             """)
             conn.execute("""
+                CREATE TABLE IF NOT EXISTS raccoon_market_notes (
+                    trading_date TEXT PRIMARY KEY,
+                    generated_at TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    note TEXT NOT NULL,
+                    market_facts TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS market_bulletins (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     trading_date TEXT NOT NULL,
@@ -105,3 +114,27 @@ class AnalysisStore:
                 "payload": payload,
             })
         return items
+
+    def get_raccoon_note(self, trading_date: str):
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT trading_date, generated_at, model, note FROM raccoon_market_notes WHERE trading_date = ?",
+                (trading_date,),
+            ).fetchone()
+        if not row:
+            return None
+        return {"trading_date": row[0], "generated_at": row[1], "model": row[2], "note": row[3]}
+
+    def save_raccoon_note(self, trading_date: str, note: str, model: str, market_facts: dict):
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO raccoon_market_notes
+                   (trading_date, generated_at, model, note, market_facts)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT(trading_date) DO UPDATE SET
+                   generated_at=excluded.generated_at, model=excluded.model,
+                   note=excluded.note, market_facts=excluded.market_facts""",
+                (trading_date, datetime.now().isoformat(timespec="seconds"), model, note,
+                 json.dumps(market_facts, ensure_ascii=False)),
+            )
+
