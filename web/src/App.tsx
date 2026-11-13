@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import {
   Activity,
@@ -61,8 +61,8 @@ type Candle = {
   RSI10?: number | null; RSI14?: number | null;
 };
 type StockAnalysis = { ticker: string; name: string; trading_date: string; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; latest?:{trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
-type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
-type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; error_count:number; };
+type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
+type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
 
@@ -545,7 +545,7 @@ function App() {
               <div><span className="section-kicker">RULE-BASED DISCOVERY</span><h2>시장 스캐너</h2></div>
               <span className="single-agent">DAILY SIGNAL · CLOSE CONFIRMED</span>
             </div>
-            <p className="scanner-intro">일봉 필수 조건 3개를 모두 충족한 종목만 후보로 표시합니다. 주봉은 추세 참고용이며, 240일선 아래 종목은 후보에서 제외합니다.</p>
+            <p className="scanner-intro">일봉 필수 조건과 240일선 필터를 통과한 종목을 주봉 추세로 A·B·C 등급화합니다. A부터 C 순서로 정렬하며 주봉이 약한 종목도 C등급으로 확인할 수 있습니다.</p>
             <div className="scanner-toolbar">
               <div className="period-toggle">
                 <button type="button" className={scanMarket === "ALL" ? "selected" : ""} onClick={() => setScanMarket("ALL")}>전체 시장</button>
@@ -553,27 +553,36 @@ function App() {
                 <button type="button" className={scanMarket === "KOSDAQ" ? "selected" : ""} onClick={() => setScanMarket("KOSDAQ")}>코스닥</button>
               </div>
               <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "전체 종목 검색 시작"}</button>
-              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 후보 {scanResult.matches.length}개 · 오류 {scanResult.error_count}건</span>}
+              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 후보 {scanResult.matches.length}개 · A {scanResult.grade_counts?.A ?? 0} / B {scanResult.grade_counts?.B ?? 0} / C {scanResult.grade_counts?.C ?? 0} · 오류 {scanResult.error_count}건</span>}
             </div>
             {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
             {scanError && <div className="scanner-state error">{scanError}</div>}
             {scanResult && <div className="scanner-table-wrap">
               {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다.</div> :
               <table className="scanner-table">
-                <thead><tr><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 필터</th><th></th></tr></thead>
-                <tbody>{scanResult.matches.map((item) => {
-                  const below240 = typeof item.latest?.ma240 === "number" && typeof item.latest?.close === "number" && item.latest.close < item.latest.ma240;
-                  return <tr key={item.ticker}>
-                    <td><b>{item.name}</b><small>{item.ticker}</small></td>
-                    <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}</td>
-                    <td>{item.signal?.rsi10?.toFixed(1) ?? "—"} / {item.signal?.rsi14?.toFixed(1) ?? "—"}</td>
-                    <td>{typeof item.latest?.volume_ratio === "number" ? item.latest.volume_ratio.toFixed(2) + "x" : "—"}</td>
-                    <td>{item.weekly?.ready ? item.weekly.trend : "데이터 부족"}</td>
-                    <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ ${Math.round(item.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}` : "산출 불가"}</td>
-                    <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")} / ${Math.round(item.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}` : "—"}</td>
-                    <td><span className={below240 ? "risk-flag" : "risk-ok"}>{below240 ? "제외 대상" : "통과"}</span></td>
-                    <td><button type="button" className="row-action" onClick={() => openCandidate(item)}>차트 분석</button></td>
-                  </tr>;
+                <thead><tr><th>등급</th><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 필터</th><th></th></tr></thead>
+                <tbody>{(["A", "B", "C"] as const).map((grade) => {
+                  const group = scanResult.matches.filter((item) => (item.weekly?.grade ?? "C") === grade);
+                  if (group.length === 0) return null;
+                  const groupTitle = grade === "A" ? "적극 매수 검토" : grade === "B" ? "매수 추천" : "매수 보류";
+                  return <Fragment key={grade}>
+                    <tr className={`grade-divider grade-divider-${grade.toLowerCase()}`}><td colSpan={10}><b>{grade}등급 · {groupTitle}</b><span>{group.length}종목</span></td></tr>
+                    {group.map((item) => {
+                      const below240 = typeof item.latest?.ma240 === "number" && typeof item.latest?.close === "number" && item.latest.close < item.latest.ma240;
+                      return <tr key={item.ticker}>
+                        <td><span className={`grade-badge grade-${(item.weekly?.grade ?? "C").toLowerCase()}`}>{item.weekly?.grade ?? "C"}</span><small>{item.weekly?.grade_score ?? 0}점</small></td>
+                        <td><b>{item.name}</b><small>{item.ticker}</small></td>
+                        <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}</td>
+                        <td>{item.signal?.rsi10?.toFixed(1) ?? "—"} / {item.signal?.rsi14?.toFixed(1) ?? "—"}</td>
+                        <td>{typeof item.latest?.volume_ratio === "number" ? item.latest.volume_ratio.toFixed(2) + "x" : "—"}</td>
+                        <td title={item.weekly?.grade_reason}>{item.weekly?.ready ? item.weekly.trend : "데이터 부족"}</td>
+                        <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ ${Math.round(item.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}` : "산출 불가"}</td>
+                        <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")} / ${Math.round(item.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}` : "—"}</td>
+                        <td><span className={below240 ? "risk-flag" : "risk-ok"}>{below240 ? "제외 대상" : "통과"}</span></td>
+                        <td><button type="button" className="row-action" onClick={() => openCandidate(item)}>차트 분석</button></td>
+                      </tr>;
+                    })}
+                  </Fragment>;
                 })}</tbody>
               </table>}
             </div>}
