@@ -482,6 +482,8 @@ class Dashboard(QWidget):
         status = f"KRX 일봉 기준 · {data.get('date', '—')}"
         if data.get("errors"):
             status += " · 일부 시장 데이터 미수신"
+        if any(item and item.get("stale") for item in (kospi, kosdaq)):
+            status += " · 마지막 저장 데이터 표시(갱신 실패)"
         self.market_status.setText(status)
         if kospi:
             self.market_values["kospi"].setText(f"{number(kospi.get('index_close'), 2)}  ({number(kospi.get('index_change'), 2)}%)")
