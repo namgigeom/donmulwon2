@@ -96,6 +96,14 @@ def main() -> None:
             number = row * SPRITE_COLS + col + 1
             crop = sprite_source.crop(cell_bounds(sprite_source.size, SPRITE_COLS, SPRITE_ROWS, col, row))
             frame = remove_edge_background(crop)
+            # Pad uneven integer grid cells to one shared canvas so every pose
+            # has the same dimensions and can be swapped without layout jumps.
+            frame_canvas = Image.new("RGBA", (
+                (sprite_source.width + SPRITE_COLS - 1) // SPRITE_COLS,
+                (sprite_source.height + SPRITE_ROWS - 1) // SPRITE_ROWS,
+            ), (0, 0, 0, 0))
+            frame_canvas.alpha_composite(frame, (0, 0))
+            frame = frame_canvas
             name = f"pose_{number:02d}.png"
             frame.save(sprite_dir / name, optimize=True)
             sprite_manifest.append({
@@ -109,6 +117,12 @@ def main() -> None:
         for col in range(SCENE_COLS):
             number = row * SCENE_COLS + col + 1
             crop = scene_source.crop(cell_bounds(scene_source.size, SCENE_COLS, SCENE_ROWS, col, row))
+            scene_canvas = Image.new("RGB", (
+                (scene_source.width + SCENE_COLS - 1) // SCENE_COLS,
+                (scene_source.height + SCENE_ROWS - 1) // SCENE_ROWS,
+            ), (0, 0, 0))
+            scene_canvas.paste(crop, (0, 0))
+            crop = scene_canvas
             name = f"scene_{number:02d}.png"
             crop.save(scene_dir / name, optimize=True)
             scene_manifest.append({
