@@ -203,7 +203,7 @@ function PriceChart({ bars, period }: { bars: Candle[]; period: "daily" | "weekl
     </svg>
 
     <div className="chart-panel-title subchart-title"><b>RSI (10 / 14)</b><span>과매수 70 · 과매도 30</span></div>
-    <svg className="technical-svg indicator-svg" viewBox={`0 0 ${width} 112`} role="img" aria-label="RSI 보조지표">
+    <svg className="technical-svg indicator-svg rsi-svg" viewBox={`0 0 ${width} 112`} role="img" aria-label="RSI 보조지표">
       {[30,50,70].map(v=><g key={v}><line x1={left} x2={width-right} y1={rsiY(v)} y2={rsiY(v)} className={v===50?"zero-line":"threshold-line"}/><text x={left-8} y={rsiY(v)+3} textAnchor="end" className="axis-label">{v}</text></g>)}
       <path d={linePath("RSI14",rsiY)} className="indicator-line rsi14-line"/>
       <path d={linePath("RSI10",rsiY)} className="indicator-line rsi10-line"/>
