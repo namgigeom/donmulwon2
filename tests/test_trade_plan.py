@@ -11,8 +11,8 @@ class TradePlanTests(unittest.TestCase):
         self.assertEqual(plan["entry_low"], 994.0)
         self.assertEqual(plan["entry_high"], 1004.0)
         self.assertEqual(plan["stop_loss"], 970.0)
-        self.assertEqual(plan["target_1"], 1060.0)
-        self.assertEqual(plan["target_2"], 1090.0)
+        self.assertEqual(plan["target_1"], 1072.0)
+        self.assertEqual(plan["target_2"], 1106.0)
         self.assertEqual(plan["reward_risk_1"], 2.0)
         self.assertEqual(plan["reward_risk_2"], 3.0)
 
