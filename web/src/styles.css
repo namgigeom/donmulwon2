@@ -206,3 +206,84 @@ button { color: inherit; }
 @media (max-width: 520px) {
   .market-value.market-stat { font-size: 10px; }
 }
+
+
+/* 2026-11-14: 가독성 확대 및 차트 분석 모니터 정보 재배치 */
+.page-content { width: min(1580px, 100%); padding: 38px 42px 24px; }
+.sidebar { width: 252px; min-width: 252px; }
+.brand-copy strong { font-size: 18px; }
+.workspace-switch b { font-size: 12px; }
+.workspace-switch small { font-size: 11px; }
+.nav-link { min-height: 43px; font-size: 13px; }
+.nav-caption { font-size: 10px; }
+.connection-card b { font-size: 11px; }
+.connection-card small { font-size: 10px; }
+.topbar { height: 72px; padding-inline: 42px; }
+.breadcrumb { font-size: 12px; }
+.market-status { font-size: 11px; }
+.user-chip { font-size: 11px; }
+.welcome-row h1 { font-size: clamp(25px, 2.35vw, 34px); }
+.welcome-row p { font-size: 13px; }
+.eyebrow { font-size: 10px; }
+.market-grid { gap: 14px; margin-bottom: 16px; }
+.market-card { min-height: 126px; padding: 17px 19px 14px; }
+.card-top { font-size: 11px; }
+.market-tag { font-size: 9px; }
+.market-value { font-size: 22px; }
+.market-value.market-stat { font-size: 14px; }
+.market-foot { font-size: 10px; }
+.neutral-label { font-size: 9px; }
+.panel { padding: 21px; }
+.section-heading h2 { font-size: 17px; }
+.section-kicker { font-size: 9px; }
+.office-scene { min-height: 465px; }
+.office-window { top: 94px; height: 194px; }
+.chart-panel { min-height: 465px; gap: 0; }
+.chart-panel .section-heading h2 { font-size: 18px; }
+.chart-empty { min-height: 190px; height: auto; flex: 1; margin-top: 14px; }
+.chart-empty-content b { font-size: 12px; }
+.chart-empty-content span { font-size: 10px; }
+.period-select { font-size: 10px; padding: 6px 9px; }
+.sector-watch-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-top: 13px; }
+.sector-watch-card { min-width: 0; padding: 12px 13px; border: 1px solid var(--line); border-radius: 7px; background: rgba(8,16,12,.2); }
+.sector-watch-title { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.sector-watch-title > span { display: flex; align-items: center; gap: 6px; color: #dce8dc; font-size: 12px; font-weight: 600; }
+.sector-watch-title svg { color: #a8c99b; }
+.sector-watch-card:nth-child(2) .sector-watch-title svg { color: #c59b91; }
+.sector-watch-title small { color: #718579; font: 8px var(--mono); white-space: nowrap; }
+.sector-empty { margin-top: 10px; color: #89998e; font-size: 10px; line-height: 1.5; }
+.market-one-line { margin-top: 12px; padding: 11px 13px; border-left: 2px solid #9fc291; border-radius: 0 6px 6px 0; background: rgba(159,194,145,.07); }
+.one-line-label { color: #94ad91; font: 8px var(--mono); letter-spacing: 1px; }
+.market-one-line p { margin: 5px 0 0; color: #c4d2c5; font-size: 11px; line-height: 1.55; }
+.analyst-profile b { font-size: 11px; }
+.analyst-profile small { font-size: 8px; }
+.analyst-message { font-size: 10px; }
+.analyst-footer { font-size: 9px; }
+.section-heading.compact h2 { font-size: 15px; }
+.signal-row b { font-size: 11px; }
+.signal-row small { font-size: 9px; }
+.signal-pending { font-size: 9px; }
+.strategy-note { font-size: 9px; }
+.system-row { font-size: 10px; }
+.status-wait { font-size: 9px; }
+.system-hint { font-size: 9px; }
+.page-footer { font-size: 8px; }
+@media (max-width: 1100px) {
+  .sidebar { width: 215px; min-width: 215px; }
+  .page-content { padding: 30px 26px 20px; }
+  .chart-panel { min-height: 440px; }
+}
+@media (max-width: 780px) {
+  .page-content { padding: 25px 16px 18px; }
+  .chart-panel { min-height: 420px; }
+  .chart-empty { min-height: 155px; }
+  .sector-watch-title > span { font-size: 11px; }
+  .market-one-line p { font-size: 10px; }
+}
+@media (max-width: 520px) {
+  .market-card { min-height: 112px; padding: 12px; }
+  .market-value { font-size: 18px; }
+  .market-value.market-stat { font-size: 11px; }
+  .sector-watch-grid { grid-template-columns: 1fr; }
+  .chart-panel { min-height: 500px; }
+}
