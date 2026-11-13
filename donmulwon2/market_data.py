@@ -8,6 +8,8 @@ from typing import Any
 import pandas as pd
 from pykrx import stock
 
+from .toss_api import TossApiError, TossClient
+
 
 @dataclass
 class DataResult:
@@ -19,6 +21,7 @@ class DataResult:
 class KrxDataProvider:
     def __init__(self):
         self.last_error = ""
+        self.toss = TossClient()
 
     @staticmethod
     def _date(value: datetime | None = None) -> str:
@@ -88,6 +91,33 @@ class KrxDataProvider:
             return DataResult(False, message=f"투자자별 수급 수집 실패: {exc}")
 
     def ticker_history(self, ticker: str, days: int = 420) -> DataResult:
+        if self.toss.configured:
+            try:
+                rows = self.toss.candles(ticker, count=min(days, 600))
+                if not rows:
+                    return DataResult(False, message=f"Toss API에서 {ticker} 일봉을 받지 못했습니다.")
+                frame = pd.DataFrame(rows)
+                aliases = {
+                    "timestamp": "date", "openPrice": "시가", "highPrice": "고가",
+                    "lowPrice": "저가", "closePrice": "종가", "volume": "거래량",
+                }
+                frame = frame.rename(columns=aliases)
+                required = ["date", "시가", "고가", "저가", "종가", "거래량"]
+                missing = [key for key in required if key not in frame.columns]
+                if missing:
+                    return DataResult(False, message=f"Toss 캔들 응답 필드 누락: {', '.join(missing)}")
+                frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+                frame = frame.dropna(subset=["date"]).set_index("date").sort_index()
+                for key in ["시가", "고가", "저가", "종가", "거래량"]:
+                    frame[key] = pd.to_numeric(frame[key], errors="coerce")
+                frame = frame.dropna(subset=["시가", "고가", "저가", "종가"])
+                if frame.empty:
+                    return DataResult(False, message="Toss 캔들 데이터가 비어 있거나 숫자로 변환되지 않습니다.")
+                return DataResult(True, frame, "Toss Securities Open API 일봉")
+            except TossApiError as exc:
+                return DataResult(False, message=str(exc))
+            except Exception as exc:
+                return DataResult(False, message=f"Toss {ticker} 일봉 변환 실패: {exc}")
         try:
             end = datetime.now()
             start = end - timedelta(days=int(days * 1.7))
@@ -96,11 +126,17 @@ class KrxDataProvider:
             )
             if frame is None or frame.empty:
                 return DataResult(False, message=f"{ticker} 일봉 데이터를 받지 못했습니다.")
-            return DataResult(True, frame, "KRX 일봉 데이터")
+            return DataResult(True, frame, "KRX(pykrx) 일봉 데이터 - Toss 미설정")
         except Exception as exc:
             return DataResult(False, message=f"{ticker} 데이터 수집 실패: {exc}")
 
     def ticker_name(self, ticker: str, date: str | None = None) -> str:
+        if self.toss.configured:
+            try:
+                info = self.toss.stock_info(ticker)
+                return str(info.get("name") or info.get("stockName") or info.get("displayName") or ticker)
+            except Exception:
+                pass
         try:
             return stock.get_market_ticker_name(ticker)
         except Exception:
