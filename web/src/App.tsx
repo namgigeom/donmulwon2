@@ -58,7 +58,7 @@ type Candle = {
   RSI10?: number | null; RSI14?: number | null;
 };
 type StockAnalysis = { ticker: string; name: string; trading_date: string; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
-type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null}; };
+type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
 type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; error_count:number; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
@@ -479,7 +479,7 @@ function App() {
             {scanResult && <div className="scanner-table-wrap">
               {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다.</div> :
               <table className="scanner-table">
-                <thead><tr><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 20일 평균</th><th>주봉 추세</th><th>240일선 위험</th><th></th></tr></thead>
+                <thead><tr><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 20일 평균</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 위험</th><th></th></tr></thead>
                 <tbody>{scanResult.matches.map((item) => {
                   const below240 = typeof item.latest?.ma240 === "number" && typeof item.latest?.close === "number" && item.latest.close < item.latest.ma240;
                   return <tr key={item.ticker}>
@@ -488,6 +488,8 @@ function App() {
                     <td>{item.signal?.rsi10?.toFixed(1) ?? "—"} / {item.signal?.rsi14?.toFixed(1) ?? "—"}</td>
                     <td>{typeof item.latest?.volume_ratio === "number" ? item.latest.volume_ratio.toFixed(2) + "x" : "—"}</td>
                     <td>{item.weekly?.ready ? item.weekly.trend : "데이터 부족"}</td>
+                    <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ ${Math.round(item.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}` : "산출 불가"}</td>
+                    <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")} / ${Math.round(item.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}` : "—"}</td>
                     <td><span className={below240 ? "risk-flag" : "risk-ok"}>{below240 ? "240일선 아래" : "해당 없음"}</span></td>
                     <td><button type="button" className="row-action" onClick={() => openCandidate(item)}>차트 분석</button></td>
                   </tr>;
