@@ -77,12 +77,12 @@ class Panel(QFrame):
             }
             QProgressBar::chunk { background: #78966e; }
         """)
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(12, 10, 12, 10)
-        self.layout.setSpacing(7)
+        self.content_layout = QVBoxLayout(self)
+        self.content_layout.setContentsMargins(12, 10, 12, 10)
+        self.content_layout.setSpacing(7)
         heading = QLabel(title)
         heading.setObjectName("panelTitle")
-        self.layout.addWidget(heading)
+        self.content_layout.addWidget(heading)
 
 
 class TechnicalChart(QWidget):
@@ -189,7 +189,7 @@ class TechnicalChart(QWidget):
         p.drawText(QRectF(macd_area.left(), macd_area.top()-11, 80, 12), "MACD HIST")
         hist = [r.get("MACD_HIST") for r in rows]
         valid = [abs(float(v)) for v in hist if v is not None]
-        max_abs = max(valid) if valid else 1
+        max_abs = max(max(valid), 1e-9) if valid else 1
         zero_y = macd_area.center().y()
         p.setPen(QPen(QColor("#6c7c70"), 1))
         p.drawLine(QPointF(macd_area.left(), zero_y), QPointF(macd_area.right(), zero_y))
@@ -223,7 +223,7 @@ class Dashboard(QWidget):
         self.market_panel = Panel("MARKET BULLETIN  /  KRX")
         self.market_status = QLabel("시장 데이터 연결 대기")
         self.market_status.setObjectName("muted")
-        self.market_panel.layout.addWidget(self.market_status)
+        self.market_panel.content_layout.addWidget(self.market_status)
         self.market_values = {}
         grid = QGridLayout()
         grid.setHorizontalSpacing(18)
@@ -247,7 +247,7 @@ class Dashboard(QWidget):
         self.scan_panel = Panel("SCREENER  /  RSI · MACD · MA10")
         self.scan_hint = QLabel("세 가지 필수 조건을 모두 충족한 종목만 후보로 표시합니다.")
         self.scan_hint.setObjectName("muted")
-        self.scan_panel.layout.addWidget(self.scan_hint)
+        self.scan_panel.content_layout.addWidget(self.scan_hint)
         self.scan_table = QTableWidget(0, 5)
         self.scan_table.setHorizontalHeaderLabels(["종목", "종가", "RSI10", "MACD", "조건"])
         self.scan_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -278,7 +278,7 @@ class Dashboard(QWidget):
         self.refresh_button.clicked.connect(self._refresh_market)
         controls.addWidget(self.ticker_input, 2)
         controls.addWidget(self.search_button)
-        self.detail_panel.layout.addLayout(controls)
+        self.detail_panel.content_layout.addLayout(controls)
         scan_controls = QHBoxLayout()
         scan_controls.addWidget(self.market_selector)
         scan_controls.addWidget(self.scan_button)
@@ -411,7 +411,10 @@ class Dashboard(QWidget):
 
     def _show_market(self, data):
         kospi, kosdaq = data.get("markets", {}).get("KOSPI"), data.get("markets", {}).get("KOSDAQ")
-        self.market_status.setText(f"KRX 일봉 기준 · {data.get('date', '—')}")
+        status = f"KRX 일봉 기준 · {data.get('date', '—')}"
+        if data.get("errors"):
+            status += " · 일부 시장 데이터 미수신"
+        self.market_status.setText(status)
         if kospi:
             self.market_values["kospi"].setText(f"{number(kospi.get('index_close'), 2)}  ({number(kospi.get('index_change'), 2)}%)")
             self.market_values["breadth"].setText(f'{kospi.get("advancers", 0):,} / {kospi.get("decliners", 0):,}')
@@ -432,7 +435,7 @@ class Dashboard(QWidget):
         self.signal_labels["macd"].setText(f'{number(latest.get("macd"), 4)} / {number(latest.get("macd_signal"), 4)}')
         self.signal_labels["ma10"].setText(money(latest.get("ma10")))
         self.signal_labels["ma240"].setText(money(latest.get("ma240")))
-        self.signal_labels["volume"].setText(f'{latest.get("volume", 0):,}주')
+        self.signal_labels["volume"].setText(f'{(latest.get("volume") or 0):,}주')
         self.signal_labels["bb"].setText(
             f'{money(latest.get("bb_lower"))} ~ {money(latest.get("bb_upper"))}'
         )
