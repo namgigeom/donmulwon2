@@ -33,11 +33,34 @@ jobs:
           scenes = sorted(Path('assets/backgrounds/scenes').glob('scene_*.png'))
           assert len(sprites) == 20, f'Expected 20 character frames, got {len(sprites)}'
           assert len(scenes) == 9, f'Expected 9 office scenes, got {len(scenes)}'
+          with Image.open('assets/Gemini_Generated_Image_f889qsf889qsf889.jpg') as source:
+              expected_sprite_size = (
+                  (source.width + 4 - 1) // 4,
+                  (source.height + 5 - 1) // 5,
+              )
+          with Image.open('assets/Gemini_Generated_Image_f889qsf889qsf889 (1).jpg') as source:
+              expected_scene_size = (
+                  (source.width + 3 - 1) // 3,
+                  (source.height + 3 - 1) // 3,
+              )
           for path in sprites:
               with Image.open(path) as image:
                   assert image.mode == 'RGBA', f'{path} is not RGBA'
-                  assert image.size == (340, 205), f'Unexpected frame size: {path} {image.size}'
-          print('Artwork extraction OK: 20 RGBA character frames + 9 background scenes')
+                  assert image.size == expected_sprite_size, (
+                      f'Unexpected frame size: {path} {image.size}; '
+                      f'expected {expected_sprite_size}'
+                  )
+          for path in scenes:
+              with Image.open(path) as image:
+                  assert image.mode == 'RGB', f'{path} is not RGB'
+                  assert image.size == expected_scene_size, (
+                      f'Unexpected scene size: {path} {image.size}; '
+                      f'expected {expected_scene_size}'
+                  )
+          print(
+              f'Artwork extraction OK: 20 RGBA character frames '
+              f'{expected_sprite_size} + 9 RGB scenes {expected_scene_size}'
+          )
           PY
       - name: Install Qt runtime libraries
         run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
