@@ -65,7 +65,10 @@ class Dashboard(QWidget):
         self.clock = QTimer(self)
         self.clock.timeout.connect(self.update)
         self.clock.start(1000)
-        QTimer.singleShot(500, self._refresh_market)
+        self.refresh_timer = QTimer(self)
+        self.refresh_timer.setSingleShot(True)
+        self.refresh_timer.timeout.connect(self._refresh_market)
+        self.refresh_timer.start(500)
 
     # ---- pixel-art painting helpers -------------------------------------------------
     def _font(self, size=16, bold=False, family="Malgun Gothic"):
