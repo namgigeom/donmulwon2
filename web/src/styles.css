@@ -420,3 +420,14 @@ button { color: inherit; }
 @keyframes key-tap { from { transform:translateY(3px) rotate(-8deg); } to { transform:translateY(-2px) rotate(8deg); } }
 @keyframes analyst-pulse { from { opacity:.45; box-shadow:0 0 0 0 rgba(167,214,154,0); } to { opacity:1; box-shadow:0 0 0 4px rgba(167,214,154,.12); } }
 @media (prefers-reduced-motion: reduce) { .desk-character.working .character-placeholder, .desk-character.working .character-work-effect, .desk-character.working .character-status i, .live-label.working i { animation:none; } }
+
+
+/* A/B/C scanner grades: ordered by weekly trend strength */
+.grade-divider td { padding:11px 12px !important; background:rgba(255,255,255,.035); border-top:1px solid rgba(180,205,185,.2) !important; }
+.grade-divider td b { font-size:12px; letter-spacing:.02em; }
+.grade-divider td span { float:right; color:var(--muted,#9aa69f); font-size:11px; }
+.grade-divider-a td b,.grade-a { color:#e6bd79 !important; }
+.grade-divider-b td b,.grade-b { color:#8fc3e5 !important; }
+.grade-divider-c td b,.grade-c { color:#a9b4aa !important; }
+.grade-badge { display:inline-flex; min-width:22px; justify-content:center; padding:4px 6px; border:1px solid currentColor; border-radius:5px; font:700 11px var(--mono); background:rgba(255,255,255,.035); }
+.scanner-table td .grade-badge + small { display:block; margin-top:4px; color:var(--muted,#9aa69f); font:9px var(--mono); }
