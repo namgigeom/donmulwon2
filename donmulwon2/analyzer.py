@@ -63,9 +63,9 @@ class DonmulwonAnalyzer:
                 "bb_upper": _number(last.get("BB_UPPER")),
                 "bb_middle": _number(last.get("BB_MIDDLE")),
                 "bb_lower": _number(last.get("BB_LOWER")),
-                "volume_ma20": _number(last.get("VOLUME_MA20")),
-                "volume_ratio": _number(last.get("거래량")) / _number(last.get("VOLUME_MA20"))
-                    if _number(last.get("거래량")) is not None and _number(last.get("VOLUME_MA20")) else None,
+                "volume_ma10": _number(last.get("VOLUME_MA10")),
+                "volume_ratio": _number(last.get("거래량")) / _number(last.get("VOLUME_MA10"))
+                    if _number(last.get("거래량")) is not None and _number(last.get("VOLUME_MA10")) else None,
                 "atr14": _number(last.get("ATR14")),
                 "support20": _number(last.get("LOW20")),
                 "resistance20": _number(last.get("HIGH20")),
@@ -127,27 +127,37 @@ class DonmulwonAnalyzer:
     ) -> DataResult:
         try:
             date = self.provider.latest_trading_date()
-            tickers = stock.get_market_ticker_list(date, market=market)
-            try:
-                names = stock.get_market_ticker_and_name(date, market=market).to_dict()
-            except Exception:
-                names = {}
+            markets = ("KOSPI", "KOSDAQ") if market.upper() == "ALL" else (market.upper(),)
+            ticker_names: dict[str, str] = {}
+            for selected_market in markets:
+                listed = stock.get_market_ticker_list(date, market=selected_market)
+                try:
+                    ticker_names.update(stock.get_market_ticker_and_name(date, market=selected_market).to_dict())
+                except Exception:
+                    pass
+                for ticker in listed:
+                    ticker_names.setdefault(ticker, "")
+            tickers = list(ticker_names)
             if limit is not None:
                 tickers = tickers[:limit]
             matches, errors = [], []
             total = len(tickers)
             for index, ticker in enumerate(tickers, start=1):
                 result = self.analyze_ticker(
-                    ticker, name=names.get(ticker), save=False, include_ohlcv=False, use_toss=False
+                    ticker, name=ticker_names.get(ticker) or None, save=False,
+                    include_ohlcv=False, use_toss=False
                 )
                 if result.ok and result.data["matched"]:
-                    matches.append(result.data)
+                    latest = result.data.get("latest", {})
+                    close, ma240 = latest.get("close"), latest.get("ma240")
+                    if ma240 is None or close is None or close >= ma240:
+                        matches.append(result.data)
                 elif not result.ok:
                     errors.append({"ticker": ticker, "error": result.message})
                 if progress:
                     progress(index, total, ticker)
             return DataResult(True, {
-                "market": market, "date": date, "scanned": total,
+                "market": market.upper(), "date": date, "scanned": total,
                 "matches": matches, "error_count": len(errors), "errors": errors[:30],
             }, "종목 검색 완료")
         except Exception as exc:
