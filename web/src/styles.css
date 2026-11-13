@@ -178,3 +178,25 @@ button { color: inherit; }
   .scene-footer { left: 13px; right: 13px; }.scene-footer span:last-child { display: none; }
   .page-footer { gap: 8px; flex-direction: column; }
 }
+
+
+/* 2026-11-14: 차트를 분석실 옆 메인 영역으로 이동 */
+.office-layout { grid-template-columns: minmax(0,1.35fr) minmax(320px,.9fr); align-items: stretch; }
+.office-scene { min-height: 435px; }
+.right-column { min-width: 0; }
+.chart-panel { min-height: 435px; display: flex; flex-direction: column; }
+.chart-empty { flex: 1; min-height: 300px; height: auto; }
+.bottom-grid { grid-template-columns: minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr); align-items: stretch; }
+.analyst-panel, .signal-panel, .checklist-panel { min-height: 215px; }
+@media (max-width: 1100px) {
+  .office-layout { grid-template-columns: minmax(0,1.15fr) minmax(290px,.85fr); }
+  .bottom-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .checklist-panel { grid-column: 1 / -1; }
+}
+@media (max-width: 780px) {
+  .office-layout { grid-template-columns: 1fr; }
+  .chart-panel { min-height: 300px; }
+  .chart-empty { min-height: 205px; }
+  .bottom-grid { grid-template-columns: 1fr; }
+  .checklist-panel { grid-column: auto; }
+}
