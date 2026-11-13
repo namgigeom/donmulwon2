@@ -250,9 +250,10 @@ class Dashboard(QWidget):
         grid.setHorizontalSpacing(18)
         grid.setVerticalSpacing(9)
         for i, (key, label) in enumerate([
-            ("kospi", "KOSPI"), ("kosdaq", "KOSDAQ"),
-            ("breadth", "상승 / 하락"), ("value", "거래대금"),
-            ("flow", "투자자 수급"), ("date", "기준 거래일"),
+            ("kospi", "KOSPI 지수"), ("kosdaq", "KOSDAQ 지수"),
+            ("breadth_kospi", "KOSPI 상승 / 하락"), ("breadth_kosdaq", "KOSDAQ 상승 / 하락"),
+            ("value_kospi", "KOSPI 거래대금"), ("value_kosdaq", "KOSDAQ 거래대금"),
+            ("foreign", "외국인 순매수 · KOSPI"), ("personal", "개인 순매수 · KOSPI"),
         ]):
             name = QLabel(label); name.setObjectName("muted")
             value = QLabel("—"); value.setObjectName("value")
@@ -439,13 +440,19 @@ class Dashboard(QWidget):
         self.market_status.setText(status)
         if kospi:
             self.market_values["kospi"].setText(f"{number(kospi.get('index_close'), 2)}  ({number(kospi.get('index_change'), 2)}%)")
-            self.market_values["breadth"].setText(f'{kospi.get("advancers", 0):,} / {kospi.get("decliners", 0):,}')
-            self.market_values["value"].setText(_compact_won(kospi.get("trading_value")))
-            self.market_values["date"].setText(kospi.get("date", "—"))
-            self.market_values["flow"].setText(_flow_label(kospi.get("investor_flows")))
-            self.market_summary.setText(kospi.get("one_line_summary", "시장 요약 미수신"))
+            self.market_values["breadth_kospi"].setText(f'{kospi.get("advancers", 0):,} / {kospi.get("decliners", 0):,}')
+            self.market_values["value_kospi"].setText(_compact_won(kospi.get("trading_value")))
+            flows = (kospi.get("investor_flows") or {}).get("values", {})
+            self.market_values["foreign"].setText(_compact_won(flows.get("외국인")))
+            self.market_values["personal"].setText(_compact_won(flows.get("개인")))
         if kosdaq:
             self.market_values["kosdaq"].setText(f"{number(kosdaq.get('index_close'), 2)}  ({number(kosdaq.get('index_change'), 2)}%)")
+            self.market_values["breadth_kosdaq"].setText(f'{kosdaq.get("advancers", 0):,} / {kosdaq.get("decliners", 0):,}')
+            self.market_values["value_kosdaq"].setText(_compact_won(kosdaq.get("trading_value")))
+        summaries = [
+            item.get("one_line_summary") for item in (kospi, kosdaq) if item
+        ]
+        self.market_summary.setText("  |  ".join(summaries) if summaries else "시장 요약 미수신")
 
     def _show_analysis(self, data):
         latest, signal = data["latest"], data["signal"]
