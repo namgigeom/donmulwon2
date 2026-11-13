@@ -63,8 +63,8 @@ app.add_middleware(
 
 def _market_name(market: str) -> str:
     normalized = market.upper()
-    if normalized not in {"KOSPI", "KOSDAQ"}:
-        raise HTTPException(status_code=404, detail="market must be KOSPI or KOSDAQ")
+    if normalized not in {"KOSPI", "KOSDAQ", "ALL"}:
+        raise HTTPException(status_code=404, detail="market must be ALL, KOSPI or KOSDAQ")
     return normalized
 
 
@@ -99,7 +99,7 @@ def analyze_stock(ticker: str):
 @app.post("/api/scan/{market}")
 def scan_market(
     market: str,
-    limit: int | None = Query(default=None, ge=1, le=3000),
+    limit: int | None = Query(default=None, ge=1),
 ):
     """Start a background scan and return a job ID immediately."""
     selected = _market_name(market)
