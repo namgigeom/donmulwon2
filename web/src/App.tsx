@@ -169,7 +169,7 @@ function PriceChart({ bars, period }: { bars: Candle[]; period: "daily" | "weekl
   return <div className="technical-chart">
     <div className="chart-legend">
       <span><i className="legend-candle-up" /> 상승</span><span><i className="legend-candle-down" /> 하락</span>
-      <span className="legend-ma10">{period === "daily" ? "MA10" : "MA10주"}</span>{period === "daily" && <span className="legend-ma240">MA240</span>}<span className="legend-bb">볼린저밴드(20,2)</span>
+      <span className="legend-ma10">{period === "daily" ? "MA10" : "MA10주"}</span>{period === "daily" && <span className="legend-ma240">MA240</span>}<span className="legend-bb">볼린저밴드(10,2)</span>
     </div>
     <div className="chart-panel-title"><b>가격 · OHLC</b><span>{rows.length}개 봉</span></div>
     <svg className="technical-svg price-svg" viewBox={`0 0 ${width} 240`} role="img" aria-label="이동평균선과 볼린저밴드가 표시된 캔들 차트">
