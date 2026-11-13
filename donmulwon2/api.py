@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .analyzer import DonmulwonAnalyzer
+from .toss_api import TossApiError, TossClient
 
 app = FastAPI(
     title="DONMULWON 2 API",
@@ -68,3 +69,36 @@ def scan_market(
     analyzer = DonmulwonAnalyzer()
     result = analyzer.scan_market(selected, limit=limit)
     return _require_success(result)
+
+
+@app.get("/api/toss/status")
+def toss_status():
+    client = TossClient()
+    return {
+        "configured": client.configured,
+        "account_configured": bool(client.account_seq),
+        "provider": "toss" if client.configured else "pykrx",
+        "message": "Toss 인증정보 확인됨" if client.configured else "Toss 인증정보 미설정: 기존 pykrx 데이터 사용",
+    }
+
+
+@app.get("/api/toss/accounts")
+def toss_accounts():
+    client = TossClient()
+    if not client.configured:
+        raise HTTPException(status_code=503, detail="Toss API 인증정보가 설정되지 않았습니다.")
+    try:
+        return {"accounts": client.accounts()}
+    except TossApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/api/toss/holdings")
+def toss_holdings():
+    client = TossClient()
+    if not client.configured:
+        raise HTTPException(status_code=503, detail="Toss API 인증정보가 설정되지 않았습니다.")
+    try:
+        return {"holdings": client.holdings()}
+    except TossApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
