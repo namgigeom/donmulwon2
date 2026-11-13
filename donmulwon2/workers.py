@@ -33,8 +33,9 @@ class AnalysisWorker(QObject):
             elif self.task == "dashboard":
                 markets = {}
                 errors = []
+                trading_date = analyzer.provider.latest_trading_date()
                 for market, index_code in (("KOSPI", "1001"), ("KOSDAQ", "2001")):
-                    bulletin = analyzer.market_bulletin(market)
+                    bulletin = analyzer.market_bulletin(market, trading_date)
                     if bulletin.ok:
                         item = bulletin.data
                         index_result = analyzer.provider.index_history(index_code, days=10)
