@@ -200,3 +200,9 @@ button { color: inherit; }
   .bottom-grid { grid-template-columns: 1fr; }
   .checklist-panel { grid-column: auto; }
 }
+
+
+.market-value.market-stat { font: 12px "Noto Sans KR", sans-serif; letter-spacing: -.35px; white-space: nowrap; }
+@media (max-width: 520px) {
+  .market-value.market-stat { font-size: 10px; }
+}
