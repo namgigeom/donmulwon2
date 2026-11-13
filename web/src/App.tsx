@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import {
   Activity,
   ArrowDownRight,
@@ -36,7 +38,77 @@ const marketNav: NavItem[] = [
   { label: "내 계좌", icon: Wallet },
 ];
 
+type MarketBulletin = {
+  date: string;
+  advancers: number;
+  decliners: number;
+  unchanged: number;
+  ticker_count: number;
+  trading_value: number;
+};
+
+type MarketCode = "KOSPI" | "KOSDAQ";
+
+function formatCount(value: number | undefined) {
+  return typeof value === "number" ? value.toLocaleString("ko-KR") : "—";
+}
+
+function formatTradingValue(value: number | undefined) {
+  return typeof value === "number"
+    ? `${(value / 100000000).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}억`
+    : "—";
+}
+
 function App() {
+  const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
+  const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadMarketData() {
+      try {
+        const healthResponse = await fetch("http://127.0.0.1:8000/api/health", {
+          signal: controller.signal,
+        });
+        if (!healthResponse.ok) throw new Error("API health check failed");
+        setApiStatus("Python API 연결됨");
+
+        const codes: MarketCode[] = ["KOSPI", "KOSDAQ"];
+        const results = await Promise.allSettled(
+          codes.map(async (code) => {
+            const response = await fetch(`http://127.0.0.1:8000/api/market/${code}/bulletin`, {
+              signal: controller.signal,
+            });
+            if (!response.ok) throw new Error(`${code} market data unavailable`);
+            return [code, await response.json()] as const;
+          }),
+        );
+
+        const next: Partial<Record<MarketCode, MarketBulletin>> = {};
+        results.forEach((result) => {
+          if (result.status === "fulfilled") next[result.value[0]] = result.value[1] as MarketBulletin;
+        });
+        setMarketData(next);
+        if (Object.keys(next).length === 0) setApiStatus("KRX 데이터 미수신");
+        else if (Object.keys(next).length < 2) setApiStatus("일부 시장 데이터 미수신");
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setApiStatus("Python API 연결 실패");
+      }
+    }
+
+    void loadMarketData();
+    return () => controller.abort();
+  }, []);
+
+  const kospi = marketData.KOSPI;
+  const kosdaq = marketData.KOSDAQ;
+  const bothMarketsReady = Boolean(kospi && kosdaq);
+  const totalAdvancers = bothMarketsReady ? kospi.advancers + kosdaq.advancers : undefined;
+  const totalDecliners = bothMarketsReady ? kospi.decliners + kosdaq.decliners : undefined;
+  const totalTradingValue = bothMarketsReady ? kospi.trading_value + kosdaq.trading_value : undefined;
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -88,7 +160,7 @@ function App() {
         <header className="topbar">
           <div className="breadcrumb"><span>WORKSPACE</span><b>/</b> 대시보드</div>
           <div className="top-actions">
-            <span className="market-status"><i /> 데이터 연결 대기</span>
+            <span className="market-status"><i /> {apiStatus}</span>
             <button className="icon-button" aria-label="알림"><Bell size={17} /><i /></button>
             <div className="user-chip"><span className="user-avatar">나</span><span>투자자</span><ChevronDown size={14} /></div>
           </div>
@@ -107,23 +179,23 @@ function App() {
           <section className="market-grid" aria-label="시장 요약">
             <article className="market-card">
               <div className="card-top"><span>KOSPI</span><span className="market-tag">종합지수</span></div>
-              <div className="market-value placeholder">데이터 연결 대기</div>
-              <div className="market-foot"><span>지수 및 등락률</span><span className="neutral-label">미수신</span></div>
+              <div className="market-value market-stat">{kospi ? `상승 ${formatCount(kospi.advancers)} / 하락 ${formatCount(kospi.decliners)}` : "데이터 연결 대기"}</div>
+              <div className="market-foot"><span>{kospi ? `기준일 ${kospi.date}` : "시장 데이터"}</span><span className="neutral-label">{kospi ? "수신" : "미수신"}</span></div>
             </article>
             <article className="market-card">
               <div className="card-top"><span>KOSDAQ</span><span className="market-tag">기술주 시장</span></div>
-              <div className="market-value placeholder">데이터 연결 대기</div>
-              <div className="market-foot"><span>지수 및 등락률</span><span className="neutral-label">미수신</span></div>
+              <div className="market-value market-stat">{kosdaq ? `상승 ${formatCount(kosdaq.advancers)} / 하락 ${formatCount(kosdaq.decliners)}` : "데이터 연결 대기"}</div>
+              <div className="market-foot"><span>{kosdaq ? `기준일 ${kosdaq.date}` : "시장 데이터"}</span><span className="neutral-label">{kosdaq ? "수신" : "미수신"}</span></div>
             </article>
             <article className="market-card accent-card">
               <div className="card-top"><span>MARKET BREADTH</span><Activity size={16} /></div>
-              <div className="market-value placeholder">— <small>/ —</small></div>
-              <div className="market-foot"><span>상승 종목 / 하락 종목</span><span className="neutral-label">미수신</span></div>
+              <div className="market-value">{formatCount(totalAdvancers)} <small>/ {formatCount(totalDecliners)}</small></div>
+              <div className="market-foot"><span>전체 상승 / 하락 종목</span><span className="neutral-label">{bothMarketsReady ? "수신" : "미수신"}</span></div>
             </article>
             <article className="market-card">
               <div className="card-top"><span>TRADING VALUE</span><BarChart3 size={16} /></div>
-              <div className="market-value placeholder">— <small>억원</small></div>
-              <div className="market-foot"><span>시장 전체 거래대금</span><span className="neutral-label">미수신</span></div>
+              <div className="market-value">{formatTradingValue(totalTradingValue)}</div>
+              <div className="market-foot"><span>KOSPI + KOSDAQ 거래대금</span><span className="neutral-label">{bothMarketsReady ? "수신" : "미수신"}</span></div>
             </article>
           </section>
 
@@ -207,7 +279,7 @@ function App() {
                 <div><span className="section-kicker">SYSTEM STATUS</span><h2>연결 및 준비 상태</h2></div>
                 <Database size={18} />
               </div>
-              <div className="system-row"><span>국내 시장 데이터</span><span className="status-wait">연결 전</span></div>
+              <div className="system-row"><span>국내 시장 데이터</span><span className="status-wait">{bothMarketsReady ? "수신" : apiStatus}</span></div>
               <div className="system-row"><span>OpenRouter AI</span><span className="status-wait">연결 전</span></div>
               <div className="system-row"><span>토스증권 API</span><span className="status-wait">연결 전</span></div>
               <div className="system-row"><span>분석 데이터베이스</span><span className="status-wait">점검 예정</span></div>
