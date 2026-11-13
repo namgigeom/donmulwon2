@@ -23,44 +23,22 @@ jobs:
         run: python -m compileall -q donmulwon2 tests
       - name: Run indicator unit tests
         run: python -m unittest discover -s tests -v
-      - name: Extract and validate artwork sprite sheets
+      - name: Extract and validate isolated Neoburi artwork
         run: |
           python tools/extract_art_sheets.py
           python - <<'PY'
           from pathlib import Path
           from PIL import Image
-          sprites = sorted(Path('assets/characters/neoburi/frames').glob('pose_*.png'))
-          scenes = sorted(Path('assets/backgrounds/scenes').glob('scene_*.png'))
-          assert len(sprites) == 20, f'Expected 20 character frames, got {len(sprites)}'
-          assert len(scenes) == 9, f'Expected 9 office scenes, got {len(scenes)}'
-          with Image.open('assets/Gemini_Generated_Image_f889qsf889qsf889.jpg') as source:
-              expected_sprite_size = (
-                  (source.width + 4 - 1) // 4,
-                  (source.height + 5 - 1) // 5,
-              )
-          with Image.open('assets/Gemini_Generated_Image_f889qsf889qsf889 (1).jpg') as source:
-              expected_scene_size = (
-                  (source.width + 3 - 1) // 3,
-                  (source.height + 3 - 1) // 3,
-              )
-          for path in sprites:
-              with Image.open(path) as image:
-                  assert image.mode == 'RGBA', f'{path} is not RGBA'
-                  assert image.size == expected_sprite_size, (
-                      f'Unexpected frame size: {path} {image.size}; '
-                      f'expected {expected_sprite_size}'
-                  )
-          for path in scenes:
-              with Image.open(path) as image:
-                  assert image.mode == 'RGB', f'{path} is not RGB'
-                  assert image.size == expected_scene_size, (
-                      f'Unexpected scene size: {path} {image.size}; '
-                      f'expected {expected_scene_size}'
-                  )
-          print(
-              f'Artwork extraction OK: 20 RGBA character frames '
-              f'{expected_sprite_size} + 9 RGB scenes {expected_scene_size}'
-          )
+          path = Path('assets/characters/neoburi/neoburi.png')
+          assert path.is_file(), 'Transparent Neoburi image was not generated'
+          with Image.open(path) as image:
+              assert image.mode == 'RGBA', f'Expected RGBA, got {image.mode}'
+              assert image.width > 0 and image.height > 0
+              alpha = image.getchannel('A')
+              assert alpha.getbbox() == (0, 0, image.width, image.height), 'Unexpected empty bounds'
+              assert alpha.getpixel((0, 0)) == 0, 'Top-left background is not transparent'
+              assert alpha.getpixel((image.width - 1, image.height - 1)) == 0, 'Bottom-right background is not transparent'
+          print(f'Isolated Neoburi PNG OK: {image.size if False else path}')
           PY
       - name: Install Qt runtime libraries
         run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
@@ -85,25 +63,12 @@ jobs:
           assert dashboard.image.width() == 1672
           assert dashboard.image.height() == 941
           assert dashboard._to_canvas(10, 10) is not None
-          assert len(dashboard.character_frames) == 6, (
-              f"Expected six desk animation frames, got {len(dashboard.character_frames)}"
-          )
-          # Prevent the dashboard's normal market refresh from starting a
-          # network worker during this isolated animation test.
-          dashboard.refresh_timer.stop()
-          first_frame = dashboard.character_frame_index
-          loop = QEventLoop()
-          QTimer.singleShot(1000, loop.quit)
-          loop.exec()
-          assert dashboard.character_frame_index != first_frame, "Character animation timer did not advance"
-          second_screenshot = window.grab()
-          assert not second_screenshot.isNull(), "Animated dashboard screenshot is empty"
-          dashboard.character_timer.stop()
+          assert not dashboard.character_image.isNull(), "Static transparent Neoburi image did not load"
           dashboard.refresh_timer.stop()
           dashboard.clock.stop()
           window.close()
           app.processEvents()
-          print("Pixel-art dashboard paint + Neoburi animation timer OK", flush=True)
+          print("Dashboard paint + static transparent Neoburi OK", flush=True)
           # pykrx currently triggers a C-extension finalizer abort on some Linux
           # runners; all GUI assertions have completed before this clean test exit.
           import os
