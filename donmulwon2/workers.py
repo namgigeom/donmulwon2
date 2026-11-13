@@ -46,9 +46,15 @@ class AnalysisWorker(QObject):
                         else:
                             item["index_close"] = None
                             item["index_change"] = None
+                        item["stale"] = False
+                        analyzer.store.save_bulletin(item["date"], market, item)
                         markets[market] = item
                     else:
                         errors.append(f"{market}: {bulletin.message}")
+                        cached = analyzer.store.latest_bulletin(market)
+                        if cached:
+                            cached["stale"] = True
+                            markets[market] = cached
                 if not markets:
                     raise RuntimeError("시장 데이터를 모두 받지 못했습니다. " + " / ".join(errors))
                 self.finished.emit({
