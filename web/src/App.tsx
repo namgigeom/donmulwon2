@@ -13,6 +13,8 @@ import {
   Database,
   LayoutDashboard,
   Search,
+  Flame,
+  ShieldAlert,
   Settings2,
   ShieldCheck,
   Sparkles,
@@ -240,12 +242,32 @@ function App() {
             <div className="right-column">
               <article className="panel chart-panel">
                 <div className="section-heading compact">
-                  <div><span className="section-kicker">MARKET MOMENTUM</span><h2>시장 추세 모니터</h2></div>
+                  <div><span className="section-kicker">TECHNICAL ANALYSIS DESK</span><h2>차트 분석 모니터</h2></div>
                   <span className="period-select">주봉 · 일봉 <ChevronDown size={13} /></span>
                 </div>
                 <div className="chart-empty">
                   <div className="chart-grid-lines"><i /><i /><i /><i /></div>
-                  <div className="chart-empty-content"><TrendingUp size={23} /><b>시장 데이터 연결 후 표시됩니다</b><span>주봉으로 큰 추세를, 일봉으로 스윙 후보를 확인합니다.</span></div>
+                  <div className="chart-empty-content"><CandlestickChart size={25} /><b>분석 종목 선택 대기</b><span>주봉으로 큰 추세를, 일봉으로 스윙 후보를 확인합니다.</span></div>
+                </div>
+                <div className="sector-watch-grid">
+                  <section className="sector-watch-card">
+                    <div className="sector-watch-title"><span><Flame size={15} /> 오늘의 강세 업종</span><small>TOP SECTORS</small></div>
+                    <div className="sector-empty">업종별 등락 데이터 연결 후 표시</div>
+                  </section>
+                  <section className="sector-watch-card">
+                    <div className="sector-watch-title"><span><ShieldAlert size={15} /> 오늘의 약세 업종</span><small>WEAK SECTORS</small></div>
+                    <div className="sector-empty">업종별 등락 데이터 연결 후 표시</div>
+                  </section>
+                </div>
+                <div className="market-one-line">
+                  <span className="one-line-label">MARKET IN ONE LINE</span>
+                  <p>{bothMarketsReady
+                    ? totalAdvancers! > totalDecliners!
+                      ? `상승 종목이 하락 종목보다 ${formatCount(totalAdvancers! - totalDecliners!)}개 많아 시장 breadth가 우세합니다.`
+                      : totalAdvancers! < totalDecliners!
+                        ? `하락 종목이 상승 종목보다 ${formatCount(totalDecliners! - totalAdvancers!)}개 많아 시장 breadth가 약합니다.`
+                        : "상승과 하락 종목 수가 같아 시장 breadth가 중립입니다."
+                    : "KOSPI·KOSDAQ 시장 데이터 수신 후 시장 한 줄 요약을 제공합니다."}</p>
                 </div>
               </article>
             </div>
