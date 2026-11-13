@@ -183,3 +183,16 @@
 - 주의: 주봉 데이터는 일봉 데이터로부터 집계한다. 주중에는 현재 진행 중인 주간 캔들을 제외하므로 최근 완료 주봉이 한 주 전으로 보일 수 있다. 별도 1시간봉/15분봉 데이터는 아직 구현하지 않았다.
 - 검증: 주봉 집계 단위 테스트를 추가했다. GitHub에 코드 반영은 완료되었으나 로컬 pytest 및 KRX 실데이터 연동 테스트는 아직 실행하지 않았다.
 - 다음: FastAPI API 계층을 추가해 기존 분석 엔진을 React 웹에서 호출하도록 연결한다.
+
+
+## 4. FastAPI 연결 계층 초안
+
+- 날짜: 2026-11-14
+- 작업: donmulwon2/api.py 신규 생성, requirements.txt, README.md, .github/workflows/python-checks.yml 수정
+- 목적: React 웹사이트가 기존 Python 분석 엔진을 HTTP API로 호출할 수 있는 최소 연결 계층을 마련한다.
+- 구현: 헬스 체크, KOSPI/KOSDAQ 시장 게시판, 6자리 종목코드 개별 분석, 시장 전체 스캔 API를 추가했다. 로컬 Vite 개발 주소만 CORS 허용한다. 스캔 조건과 지표 계산은 기존 analyzer를 그대로 사용한다.
+- 실행: 저장소 루트에서 uvicorn donmulwon2.api:app --reload --host 127.0.0.1 --port 8000 실행. 웹은 별도 터미널에서 npm run dev 실행.
+- 보안/데이터: 이 API는 조회·분석 전용이며 자동매매 기능이 없다. OpenRouter/토스증권 키나 비밀값을 추가하지 않았다.
+- CI: Python 검사 워크플로가 web-rebuild 브랜치 push에도 실행되도록 브랜치 조건을 확장했다.
+- 검증: GitHub 파일 반영만 확인. FastAPI 로컬 구동, API 응답, Python 테스트 및 React와의 실제 통신은 아직 실행되지 않았다. 시장 전체 스캔은 종목별 KRX 조회를 순차 수행하므로 응답에 시간이 걸릴 수 있다.
+- 다음: 로컬 CI 결과 확인, React에서 /api/health 및 시장 데이터 연결, 이후 비동기 스캔 진행률 API 설계.
