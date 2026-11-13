@@ -88,6 +88,9 @@ jobs:
           assert len(dashboard.character_frames) == 6, (
               f"Expected six desk animation frames, got {len(dashboard.character_frames)}"
           )
+          # Prevent the dashboard's normal market refresh from starting a
+          # network worker during this isolated animation test.
+          dashboard.refresh_timer.stop()
           first_frame = dashboard.character_frame_index
           loop = QEventLoop()
           QTimer.singleShot(1000, loop.quit)
