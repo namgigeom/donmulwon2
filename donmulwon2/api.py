@@ -129,10 +129,33 @@ def scan_job_status(job_id: str):
 
 
 @app.get("/api/history")
-def analysis_history(limit: int = Query(default=30, ge=1, le=100)):
-    """Return recent saved single-stock analysis records."""
+def analysis_history(limit: int = Query(default=100, ge=1, le=200)):
+    """Return five-day analysis history with current-price performance."""
     from .storage import AnalysisStore
-    return {"items": AnalysisStore().recent_analyses(limit)}
+
+    items = AnalysisStore().recent_analyses(limit)
+    analyzer = DonmulwonAnalyzer()
+    current_prices = {}
+    for item in items:
+        ticker = item["ticker"]
+        if ticker not in current_prices:
+            result = analyzer.analyze_ticker(
+                ticker, save=False, include_ohlcv=False
+            )
+            current_prices[ticker] = (
+                result.data.get("latest", {}).get("close")
+                if result.ok else None
+            )
+        current = current_prices[ticker]
+        baseline = item.get("baseline_price")
+        item["current_price"] = current
+        item["change_pct"] = (
+            round((current / baseline - 1) * 100, 2)
+            if isinstance(current, (int, float))
+            and isinstance(baseline, (int, float)) and baseline > 0
+            else None
+        )
+    return {"items": items, "retention_days": 5}
 
 
 @app.get("/api/toss/status")
