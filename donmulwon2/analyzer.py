@@ -89,6 +89,11 @@ class DonmulwonAnalyzer:
             return breadth
         flows = self.provider.investor_flows(market, breadth.data["date"])
         data = dict(breadth.data)
+        index = self.provider.index_snapshot(market, data["date"])
+        sectors = self.provider.sector_performance(market, data["date"])
+        data["index"] = index.data if index.ok else None
+        data["sectors"] = sectors.data if sectors.ok else []
+        data["sector_status"] = sectors.message
         data["investor_flows"] = flows.data if flows.ok else None
         data["flow_status"] = flows.message
         adv, dec = data["advancers"], data["decliners"]
