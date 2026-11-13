@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
+import os
 
 import pandas as pd
 from pykrx import stock
@@ -39,6 +40,14 @@ class KrxDataProvider:
             if frame is not None and not frame.empty:
                 return frame.index[-1].strftime("%Y%m%d")
         except Exception as exc:
+            detail = str(exc)
+            if "Expecting value" in detail and not (os.getenv("KRX_ID") and os.getenv("KRX_PW")):
+                raise RuntimeError(
+                    "KRX 서버가 정상 JSON 대신 빈 응답/오류 응답을 반환했습니다. "
+                    "최근 pykrx의 인증 필요 API는 KRX 회원 인증이 필요할 수 있습니다. "
+                    "저장소 루트 .env에 KRX_ID와 KRX_PW를 설정하고 백엔드를 재시작하세요. "
+                    "인증정보가 이미 설정되어 있다면 KRX 서버 장애 또는 접속 제한 가능성이 있습니다."
+                ) from exc
             raise RuntimeError(f"KRX 최근 거래일 조회 실패: {exc}") from exc
         raise RuntimeError("최근 거래일을 확인하지 못했습니다. KRX 응답을 확인하세요.")
 
@@ -54,7 +63,13 @@ class KrxDataProvider:
                 return DataResult(False, message="지수 데이터를 받지 못했습니다.")
             return DataResult(True, frame, "KRX 지수 데이터")
         except Exception as exc:
-            return DataResult(False, message=f"지수 데이터 수집 실패: {exc}")
+            detail = str(exc)
+            if "Expecting value" in detail and not (os.getenv("KRX_ID") and os.getenv("KRX_PW")):
+                detail = (
+                    "KRX 응답이 JSON이 아닙니다. .env에 KRX_ID와 KRX_PW를 설정하고 "
+                    "백엔드를 재시작하세요. 인증정보가 이미 있으면 KRX 서버 장애/접속 제한일 수 있습니다."
+                )
+            return DataResult(False, message=f"지수 데이터 수집 실패: {detail}")
 
     def market_breadth(self, market: str, date: str | None = None) -> DataResult:
         try:
