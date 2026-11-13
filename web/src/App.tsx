@@ -50,6 +50,8 @@ type MarketBulletin = {
 };
 
 type MarketCode = "KOSPI" | "KOSDAQ";
+type Candle = { date: string; "시가": number | null; "고가": number | null; "저가": number | null; "종가": number | null };
+type StockAnalysis = { ticker: string; name: string; trading_date: string; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 
 function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("ko-KR") : "—";
@@ -63,6 +65,12 @@ function formatTradingValue(value: number | undefined) {
 
 function App() {
   const [chartPeriod, setChartPeriod] = useState<"daily" | "weekly">("daily");
+  const [tickerInput, setTickerInput] = useState("");
+  const [selectedTicker, setSelectedTicker] = useState("");
+  const [stockAnalysis, setStockAnalysis] = useState<StockAnalysis | null>(null);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockError, setStockError] = useState("");
+  const apiBase = "http://" + window.location.hostname + ":8000";
   const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
 
@@ -71,7 +79,7 @@ function App() {
 
     async function loadMarketData() {
       try {
-        const healthResponse = await fetch("http://127.0.0.1:8000/api/health", {
+        const healthResponse = await fetch(apiBase + "/api/health", {
           signal: controller.signal,
         });
         if (!healthResponse.ok) throw new Error("API health check failed");
@@ -80,7 +88,7 @@ function App() {
         const codes: MarketCode[] = ["KOSPI", "KOSDAQ"];
         const results = await Promise.allSettled(
           codes.map(async (code) => {
-            const response = await fetch(`http://127.0.0.1:8000/api/market/${code}/bulletin`, {
+            const response = await fetch(apiBase + "/api/market/" + code + "/bulletin", {
               signal: controller.signal,
             });
             if (!response.ok) throw new Error(`${code} market data unavailable`);
@@ -105,6 +113,27 @@ function App() {
     return () => controller.abort();
   }, []);
 
+
+  useEffect(() => {
+    if (!selectedTicker) return;
+    const controller = new AbortController();
+    async function loadStock() {
+      setStockLoading(true); setStockError("");
+      try {
+        const response = await fetch(apiBase + "/api/stocks/" + selectedTicker, { signal: controller.signal });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.detail || "종목 데이터를 불러오지 못했습니다.");
+        setStockAnalysis(payload as StockAnalysis);
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setStockAnalysis(null); setStockError(error instanceof Error ? error.message : "종목 조회에 실패했습니다.");
+      } finally { if (!controller.signal.aborted) setStockLoading(false); }
+    }
+    void loadStock();
+    return () => controller.abort();
+  }, [selectedTicker]);
+
+  const activeBars = chartPeriod === "daily" ? stockAnalysis?.ohlcv ?? [] : stockAnalysis?.weekly_ohlcv ?? [];
   const kospi = marketData.KOSPI;
   const kosdaq = marketData.KOSDAQ;
   const bothMarketsReady = Boolean(kospi && kosdaq);
@@ -244,7 +273,7 @@ function App() {
               <article className="panel chart-panel">
                 <div className="section-heading compact">
                   <div><span className="section-kicker">TECHNICAL ANALYSIS DESK</span><h2>차트 분석 모니터</h2></div>
-                  <div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div>
+                  <form className="chart-controls" onSubmit={(event) => { event.preventDefault(); if (!/^\d{6}$/.test(tickerInput)) { setStockError("종목코드 6자리를 입력해 주세요."); return; } setSelectedTicker(tickerInput); }}><input aria-label="종목코드" value={tickerInput} onChange={(event) => setTickerInput(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="종목코드 6자리" maxLength={6} /><button type="submit" disabled={stockLoading}>조회</button><div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div></form>
                 </div>
                 <div className="chart-empty">
                   <div className="chart-grid-lines"><i /><i /><i /><i /></div>
