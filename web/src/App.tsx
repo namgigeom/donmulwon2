@@ -56,7 +56,7 @@ type Candle = {
   date: string;
   "시가": number | null; "고가": number | null; "저가": number | null; "종가": number | null;
   "거래량"?: number | null;
-  MA10?: number | null; MA20?: number | null; MA60?: number | null;
+  MA10?: number | null; MA20?: number | null; MA60?: number | null; MA240?: number | null;
   BB_UPPER?: number | null; BB_MIDDLE?: number | null; BB_LOWER?: number | null;
   MACD?: number | null; MACD_SIGNAL?: number | null; MACD_HIST?: number | null;
   RSI10?: number | null; RSI14?: number | null;
@@ -135,7 +135,7 @@ function buildMarketNarrative(kospi?: MarketBulletin, kosdaq?: MarketBulletin) {
   return [indexPhrase, sectorPhrase, flowPhrase, breadthPhrase, closePhrase].filter(Boolean).join(" ");
 }
 
-function PriceChart({ bars }: { bars: Candle[] }) {
+function PriceChart({ bars, period }: { bars: Candle[]; period: "daily" | "weekly" }) {
   const rows = bars.filter((b) => [b["시가"], b["고가"], b["저가"], b["종가"]].every((v) => typeof v === "number" && Number.isFinite(v)));
   if (!rows.length) return <div className="chart-empty-content"><b>선택한 주기의 차트 데이터가 없습니다.</b></div>;
 
@@ -143,7 +143,7 @@ function PriceChart({ bars }: { bars: Candle[] }) {
   const step = plotWidth / rows.length;
   const candleWidth = Math.max(2, Math.min(10, step * 0.62));
   const numeric = (v: number | null | undefined) => typeof v === "number" && Number.isFinite(v) ? v : null;
-  const priceValues = rows.flatMap((b) => [numeric(b["고가"]), numeric(b["저가"]), numeric(b.BB_UPPER), numeric(b.BB_LOWER), numeric(b.MA10), numeric(b.MA20)]).filter((v): v is number => v !== null);
+  const priceValues = rows.flatMap((b) => [numeric(b["고가"]), numeric(b["저가"]), numeric(b.BB_UPPER), numeric(b.BB_LOWER), numeric(b.MA10), numeric(b.MA240)]).filter((v): v is number => v !== null);
   const minPrice = Math.min(...priceValues), maxPrice = Math.max(...priceValues);
   const pricePad = (maxPrice - minPrice || 1) * 0.08;
   const pMin = minPrice - pricePad, pMax = maxPrice + pricePad;
@@ -169,7 +169,7 @@ function PriceChart({ bars }: { bars: Candle[] }) {
   return <div className="technical-chart">
     <div className="chart-legend">
       <span><i className="legend-candle-up" /> 상승</span><span><i className="legend-candle-down" /> 하락</span>
-      <span className="legend-ma10">MA10</span><span className="legend-ma20">MA20</span><span className="legend-bb">볼린저밴드(20,2)</span>
+      <span className="legend-ma10">{period === "daily" ? "MA10" : "MA10주"}</span>{period === "daily" && <span className="legend-ma240">MA240</span>}<span className="legend-bb">볼린저밴드(20,2)</span>
     </div>
     <div className="chart-panel-title"><b>가격 · OHLC</b><span>{rows.length}개 봉</span></div>
     <svg className="technical-svg price-svg" viewBox={`0 0 ${width} 240`} role="img" aria-label="이동평균선과 볼린저밴드가 표시된 캔들 차트">
@@ -178,7 +178,7 @@ function PriceChart({ bars }: { bars: Candle[] }) {
       <path d={linePath("BB_MIDDLE",priceY)} className="indicator-line bb-mid-line"/>
       <path d={linePath("BB_LOWER",priceY)} className="indicator-line bb-line"/>
 
-      <path d={linePath("MA20",priceY)} className="indicator-line ma20-line"/>
+      {period === "daily" && <path d={linePath("MA240",priceY)} className="indicator-line ma240-line"/>}
       <path d={linePath("MA10",priceY)} className="indicator-line ma10-line"/>
       {rows.map((bar,i) => {
         const open=numeric(bar["시가"])!, high=numeric(bar["고가"])!, low=numeric(bar["저가"])!, close=numeric(bar["종가"])!;
@@ -531,7 +531,7 @@ function App() {
                 </div>
                 <div className="chart-empty chart-workspace">
                   <div className="chart-grid-lines"><i /><i /><i /><i /></div>
-                  {stockLoading ? <div className="chart-empty-content"><b>종목 데이터 조회 중…</b></div> : stockError ? <div className="chart-empty-content"><b>{stockError}</b></div> : stockAnalysis ? <PriceChart bars={activeBars} /> : <div className="chart-empty-content"><CandlestickChart size={25} /><b>종목 조회 대기</b><span>예: 삼성전자 005930 · 종목코드 입력 후 조회</span></div>}
+                  {stockLoading ? <div className="chart-empty-content"><b>종목 데이터 조회 중…</b></div> : stockError ? <div className="chart-empty-content"><b>{stockError}</b></div> : stockAnalysis ? <PriceChart bars={activeBars} period={chartPeriod} /> : <div className="chart-empty-content"><CandlestickChart size={25} /><b>종목 조회 대기</b><span>예: 삼성전자 005930 · 종목코드 입력 후 조회</span></div>}
                 </div>
                 {stockAnalysis && <div className="stock-plan">
                   <div className="stock-plan-heading"><b>{stockAnalysis.name} · 매매 기준 점검</b><span>{stockAnalysis.trading_date}</span></div>
@@ -673,7 +673,7 @@ function App() {
               {stockAnalysis && <>
                 <div className="stock-identity"><div><h2>{stockAnalysis.name} <small>{stockAnalysis.ticker}</small></h2><span>기준일 {stockAnalysis.trading_date} · {stockAnalysis.weekly?.trend ?? "주봉 추세 확인 중"}</span></div>
                   <div className="stock-last-price"><b>{stockAnalysis.latest?.close?.toLocaleString("ko-KR") ?? "—"}원</b><small>전일 대비 {typeof stockAnalysis.latest?.change_pct === "number" ? (stockAnalysis.latest.change_pct > 0 ? "+" : "") + stockAnalysis.latest.change_pct.toFixed(2) + "%" : "—"}</small></div></div>
-                <div className="stock-large-chart"><PriceChart bars={activeBars}/></div>
+                <div className="stock-large-chart"><PriceChart bars={activeBars} period={chartPeriod}/></div>
                 <section className="company-profile-card">
                   <div className="section-heading compact"><div><span className="section-kicker">COMPANY & FUNDAMENTALS</span><h2>기업 개요 · 실적 · 전망</h2></div><span className="company-source">{stockAnalysis.company?.source ?? "기업 데이터"}</span></div>
                   {stockAnalysis.company?.available ? <>
@@ -729,7 +729,7 @@ function App() {
                       <div><small>목표 2 · 3R</small><b className="positive">{Math.round(stockAnalysis.latest.trade_plan.target_2 ?? 0).toLocaleString("ko-KR")}원</b></div>
                     </div> : <div className="scanner-state">ATR/종가 데이터 부족으로 가격 기준을 계산할 수 없습니다.</div>}
                     <div className="stock-metric-grid">
-                      <div><small>MA10 / MA20</small><b>{stockAnalysis.latest?.ma10?.toLocaleString("ko-KR") ?? "—"} / {stockAnalysis.latest?.ma20?.toLocaleString("ko-KR") ?? "—"}</b></div>
+                      <div><small>MA10 / MA240</small><b>{stockAnalysis.latest?.ma10?.toLocaleString("ko-KR") ?? "—"} / {stockAnalysis.latest?.ma240?.toLocaleString("ko-KR") ?? "—"}</b></div>
                       <div><small>MA60 / MA240</small><b>{stockAnalysis.latest?.ma60?.toLocaleString("ko-KR") ?? "—"} / {stockAnalysis.latest?.ma240?.toLocaleString("ko-KR") ?? "—"}</b></div>
                       <div><small>RSI10 / RSI14</small><b>{stockAnalysis.latest?.rsi10?.toFixed(1) ?? "—"} / {stockAnalysis.latest?.rsi14?.toFixed(1) ?? "—"}</b></div>
                       <div><small>MACD / Signal</small><b>{stockAnalysis.latest?.macd?.toFixed(2) ?? "—"} / {stockAnalysis.latest?.macd_signal?.toFixed(2) ?? "—"}</b></div>
