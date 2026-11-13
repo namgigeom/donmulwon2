@@ -23,6 +23,22 @@ jobs:
         run: python -m compileall -q donmulwon2 tests
       - name: Run indicator unit tests
         run: python -m unittest discover -s tests -v
+      - name: Extract and validate artwork sprite sheets
+        run: |
+          python tools/extract_art_sheets.py
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          sprites = sorted(Path('assets/characters/neoburi/frames').glob('pose_*.png'))
+          scenes = sorted(Path('assets/backgrounds/scenes').glob('scene_*.png'))
+          assert len(sprites) == 20, f'Expected 20 character frames, got {len(sprites)}'
+          assert len(scenes) == 9, f'Expected 9 office scenes, got {len(scenes)}'
+          for path in sprites:
+              with Image.open(path) as image:
+                  assert image.mode == 'RGBA', f'{path} is not RGBA'
+                  assert image.size == (340, 204), f'Unexpected frame size: {path} {image.size}'
+          print('Artwork extraction OK: 20 RGBA character frames + 9 background scenes')
+          PY
       - name: Install Qt runtime libraries
         run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1
       - name: Import GUI modules
