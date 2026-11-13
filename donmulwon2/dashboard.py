@@ -369,8 +369,8 @@ class Dashboard(QWidget):
         self._busy = False
         for button in (self.search_button, self.scan_button, self.refresh_button):
             button.setEnabled(True)
-        self._threads = [t for t in self._threads if t.isRunning()]
-        self._workers = [w for w in self._workers if w.thread() is not None]
+        self._threads.clear()
+        self._workers.clear()
 
     def _refresh_market(self):
         self._run_worker("dashboard")
