@@ -18,7 +18,6 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
-  TrendingUp,
 } from "lucide-react";
 
 type NavItem = {
@@ -257,9 +256,9 @@ function App() {
   const kospi = marketData.KOSPI;
   const kosdaq = marketData.KOSDAQ;
   const bothMarketsReady = Boolean(kospi && kosdaq);
-  const totalAdvancers = bothMarketsReady ? kospi.advancers + kosdaq.advancers : undefined;
-  const totalDecliners = bothMarketsReady ? kospi.decliners + kosdaq.decliners : undefined;
-  const totalTradingValue = bothMarketsReady ? kospi.trading_value + kosdaq.trading_value : undefined;
+  const totalAdvancers = kospi && kosdaq ? kospi.advancers + kosdaq.advancers : undefined;
+  const totalDecliners = kospi && kosdaq ? kospi.decliners + kosdaq.decliners : undefined;
+  const totalTradingValue = kospi && kosdaq ? kospi.trading_value + kosdaq.trading_value : undefined;
 
   return (
     <main className="app-shell">
