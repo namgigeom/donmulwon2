@@ -90,8 +90,8 @@ class KrxDataProvider:
         except Exception as exc:
             return DataResult(False, message=f"투자자별 수급 수집 실패: {exc}")
 
-    def ticker_history(self, ticker: str, days: int = 420) -> DataResult:
-        if self.toss.configured:
+    def ticker_history(self, ticker: str, days: int = 420, *, use_toss: bool = True) -> DataResult:
+        if use_toss and self.toss.configured:
             try:
                 rows = self.toss.candles(ticker, count=min(days, 600))
                 if not rows:
