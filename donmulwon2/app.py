@@ -25,7 +25,6 @@ class MainScreen(QWidget):
             raise RuntimeError(f"메인 화면 이미지를 읽을 수 없습니다: {image_path}")
 
         self.started_at = datetime.now()
-        self.active_tab = 0
         self.tick = 0
         self.scroll_offset = 0
         self.setMouseTracking(True)
@@ -100,33 +99,18 @@ class MainScreen(QWidget):
             start += text_width + 70
         painter.setClipping(False)
 
-        # Clickable section selector.
-        tab_x = 22
-        tab_y = 8
-        tab_w = 130
-        for index, label in enumerate(self.TABS):
-            left = tab_x + index * (tab_w + 8)
-            active = index == self.active_tab
-            painter.setPen(QColor("#e7c98e") if active else QColor("#9d9a8b"))
-            painter.setBrush(QColor(87, 66, 42, 220) if active else QColor(25, 31, 29, 215))
-            painter.drawRoundedRect(left, tab_y, tab_w, 30, 5, 5)
-            painter.setFont(QFont("Malgun Gothic", 9, QFont.Weight.Bold if active else QFont.Weight.Normal))
-            painter.drawText(left, tab_y, tab_w, 30, Qt.AlignmentFlag.AlignCenter, label)
-
-    def mousePressEvent(self, event):
-        if event.button() != Qt.MouseButton.LeftButton:
-            return super().mousePressEvent(event)
-
-        _, x, y, factor = self._layout_image()
-        px = (event.position().x() - x) / factor
-        py = (event.position().y() - y) / factor
-        if 8 <= py <= 38 and 22 <= px <= 22 + 4 * 138:
-            index = int((px - 22) // 138)
-            if 0 <= index < len(self.TABS):
-                self.active_tab = index
-                self.update()
-                return
-        super().mousePressEvent(event)
+        # Tiny animated market pulse; decorative until a real quote feed is connected.
+        wave = QPainterPath()
+        for point in range(44):
+            xx = 1222 + point * 1.7
+            yy = y + 27 + math.sin((point + self.tick * 0.7) * 0.42) * (4 + 2 * math.sin(self.tick / 8))
+            if point == 0:
+                wave.moveTo(xx, yy)
+            else:
+                wave.lineTo(xx, yy)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QColor("#86b88b"))
+        painter.drawPath(wave)
 
 
 class MainWindow(QMainWindow):
