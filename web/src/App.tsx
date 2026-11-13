@@ -60,6 +60,9 @@ type Candle = {
   RSI10?: number | null; RSI14?: number | null;
 };
 type StockAnalysis = { ticker: string; name: string; trading_date: string; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
+type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null}; };
+type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; error_count:number; };
+
 
 function formatCount(value: number | undefined) {
   return typeof value === "number" ? value.toLocaleString("ko-KR") : "—";
@@ -158,6 +161,28 @@ function App() {
   const apiBase = "http://" + window.location.hostname + ":8000";
   const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
+  const [scanMarket, setScanMarket] = useState<MarketCode>("KOSPI");
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+
+  async function runMarketScan() {
+    setScanLoading(true); setScanError(""); setScanResult(null);
+    try {
+      const response = await fetch(apiBase + "/api/scan/" + scanMarket + "?limit=3000", { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail || "시장 스캔에 실패했습니다.");
+      setScanResult(payload as ScanResult);
+    } catch (error) {
+      setScanError(error instanceof Error ? error.message : "시장 스캔에 실패했습니다.");
+    } finally { setScanLoading(false); }
+  }
+
+  function openCandidate(item: ScanMatch) {
+    setTickerInput(item.ticker);
+    setSelectedTicker(item.ticker);
+    document.getElementById("chart-desk")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -246,7 +271,7 @@ function App() {
         <nav className="nav-groups" aria-label="주요 메뉴">
           <p className="nav-caption">WORKSPACE</p>
           {mainNav.map(({ label, icon: Icon, active }) => (
-            <a className={active ? "nav-link active" : "nav-link"} href="#" key={label}>
+            <a className={active ? "nav-link active" : "nav-link"} href={label === "시장 스캐너" ? "#market-scanner" : "#"} key={label}>
               <Icon size={17} strokeWidth={1.8} />
               <span>{label}</span>
               {label === "시장 스캐너" && <span className="nav-count">3</span>}
@@ -355,7 +380,7 @@ function App() {
             </article>
 
             <div className="right-column">
-              <article className="panel chart-panel">
+              <article className="panel chart-panel" id="chart-desk">
                 <div className="section-heading compact">
                   <div><span className="section-kicker">TECHNICAL ANALYSIS DESK</span><h2>차트 분석 모니터</h2></div>
                   <form className="chart-controls" onSubmit={(event) => { event.preventDefault(); if (!/^\d{6}$/.test(tickerInput)) { setStockError("종목코드 6자리를 입력해 주세요."); return; } setSelectedTicker(tickerInput); }}><label className="ticker-search"><Search size={15}/><input aria-label="종목코드" value={tickerInput} onChange={(event) => setTickerInput(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="종목코드 6자리" maxLength={6} /></label><button className="ticker-submit" type="submit" disabled={stockLoading}>{stockLoading ? "조회 중" : "종목 조회"}</button><div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div></form>
@@ -422,6 +447,44 @@ function App() {
               <div className="system-row"><span>분석 데이터베이스</span><span className="status-wait">점검 예정</span></div>
               <div className="system-hint"><ArrowDownRight size={14} /> 실제 연결 및 응답 검증 후 상태가 변경됩니다.</div>
             </article>
+          </section>
+
+
+          <section className="panel scanner-panel" id="market-scanner">
+            <div className="section-heading compact">
+              <div><span className="section-kicker">RULE-BASED DISCOVERY</span><h2>시장 스캐너</h2></div>
+              <span className="single-agent">DAILY SIGNAL · CLOSE CONFIRMED</span>
+            </div>
+            <p className="scanner-intro">일봉 필수 조건 3개를 모두 충족한 종목만 후보로 표시합니다. 주봉은 추세 참고용이며, 240일선 아래는 자동 제외하지 않고 위험으로 표시합니다.</p>
+            <div className="scanner-toolbar">
+              <div className="period-toggle">
+                <button type="button" className={scanMarket === "KOSPI" ? "selected" : ""} onClick={() => setScanMarket("KOSPI")}>KOSPI</button>
+                <button type="button" className={scanMarket === "KOSDAQ" ? "selected" : ""} onClick={() => setScanMarket("KOSDAQ")}>KOSDAQ</button>
+              </div>
+              <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "선택 시장 스캔 시작"}</button>
+              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 후보 {scanResult.matches.length}개 · 오류 {scanResult.error_count}건</span>}
+            </div>
+            {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> 종목별 일봉 데이터를 확인하고 조건을 계산하고 있습니다. 종목 수에 따라 시간이 걸릴 수 있습니다.</div>}
+            {scanError && <div className="scanner-state error">{scanError}</div>}
+            {scanResult && <div className="scanner-table-wrap">
+              {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다.</div> :
+              <table className="scanner-table">
+                <thead><tr><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 20일 평균</th><th>주봉 추세</th><th>240일선 위험</th><th></th></tr></thead>
+                <tbody>{scanResult.matches.map((item) => {
+                  const below240 = typeof item.latest?.ma240 === "number" && typeof item.latest?.close === "number" && item.latest.close < item.latest.ma240;
+                  return <tr key={item.ticker}>
+                    <td><b>{item.name}</b><small>{item.ticker}</small></td>
+                    <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}</td>
+                    <td>{item.signal?.rsi10?.toFixed(1) ?? "—"} / {item.signal?.rsi14?.toFixed(1) ?? "—"}</td>
+                    <td>{typeof item.latest?.volume_ratio === "number" ? item.latest.volume_ratio.toFixed(2) + "x" : "—"}</td>
+                    <td>{item.weekly?.ready ? item.weekly.trend : "데이터 부족"}</td>
+                    <td><span className={below240 ? "risk-flag" : "risk-ok"}>{below240 ? "240일선 아래" : "해당 없음"}</span></td>
+                    <td><button type="button" className="row-action" onClick={() => openCandidate(item)}>차트 분석</button></td>
+                  </tr>;
+                })}</tbody>
+              </table>}
+            </div>}
+            <div className="scanner-footnote">데이터 출처: KRX 종목 목록 및 설정된 시세 공급자. 스캔은 조회 전용이며 주문을 실행하지 않습니다. 장중 데이터는 종가 확정 신호와 구분해 해석해야 합니다.</div>
           </section>
 
           <footer className="page-footer"><span>© 2026 DONMULWON 2</span><span>DATA FIRST · RISK AWARE · NO AUTO TRADING</span></footer>
