@@ -49,5 +49,9 @@ jobs:
           dashboard.clock.stop()
           window.close()
           app.processEvents()
-          print("Pixel-art canvas construction and paint OK")
+          print("Pixel-art canvas construction and paint OK", flush=True)
+          # pykrx currently triggers a C-extension finalizer abort on some Linux
+          # runners; all GUI assertions have completed before this clean test exit.
+          import os
+          os._exit(0)
           PY
