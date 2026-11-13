@@ -443,8 +443,8 @@ class Dashboard(QWidget):
             self.market_values["breadth_kospi"].setText(f'{kospi.get("advancers", 0):,} / {kospi.get("decliners", 0):,}')
             self.market_values["value_kospi"].setText(_compact_won(kospi.get("trading_value")))
             flows = (kospi.get("investor_flows") or {}).get("values", {})
-            self.market_values["foreign"].setText(_compact_won(flows.get("외국인")))
-            self.market_values["personal"].setText(_compact_won(flows.get("개인")))
+            self.market_values["foreign"].setText(_compact_flow(flows.get("외국인")))
+            self.market_values["personal"].setText(_compact_flow(flows.get("개인")))
         if kosdaq:
             self.market_values["kosdaq"].setText(f"{number(kosdaq.get('index_close'), 2)}  ({number(kosdaq.get('index_change'), 2)}%)")
             self.market_values["breadth_kosdaq"].setText(f'{kosdaq.get("advancers", 0):,} / {kosdaq.get("decliners", 0):,}')
@@ -540,6 +540,19 @@ def _compact_won(value):
     if value >= 1_000_000_000_000: return f"{value/1_000_000_000_000:.2f}조원"
     if value >= 100_000_000: return f"{value/100_000_000:.1f}억원"
     return f"{value:,}원"
+
+
+def _compact_flow(value):
+    if value is None:
+        return "—"
+    amount = int(value)
+    sign = "+" if amount > 0 else ""
+    absolute = abs(amount)
+    if absolute >= 1_000_000_000_000:
+        return f"{sign}{amount/1_000_000_000_000:.2f}조"
+    if absolute >= 100_000_000:
+        return f"{sign}{amount/100_000_000:.1f}억"
+    return f"{amount:+,}원"
 
 
 def _flow_label(data):
