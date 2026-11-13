@@ -180,6 +180,15 @@ class TechnicalChart(QWidget):
             p.setPen(QPen(QColor(color), 1.4))
             p.drawPath(path)
 
+        # Latest 20-session support/resistance reference levels.
+        latest_row = rows[-1]
+        for key, color in (("LOW20", "#73a7b7"), ("HIGH20", "#c98572")):
+            level = latest_row.get(key)
+            if level is not None and lo <= float(level) <= hi:
+                y_level = py(float(level))
+                p.setPen(QPen(QColor(color), 1, Qt.PenStyle.DashLine))
+                p.drawLine(QPointF(chart.left(), y_level), QPointF(chart.right(), y_level))
+
         p.setPen(QColor("#d9b77d"))
         p.drawText(QRectF(rsi_area.left(), rsi_area.top()-11, 70, 12), Qt.AlignmentFlag.AlignLeft, "RSI(10/14)")
         for key, color in (("RSI10", "#d9b77d"), ("RSI14", "#7ab8c5")):
@@ -500,7 +509,15 @@ class Dashboard(QWidget):
         self.signal_labels["macd"].setText(f'{number(latest.get("macd"), 4)} / {number(latest.get("macd_signal"), 4)}')
         self.signal_labels["ma10"].setText(money(latest.get("ma10")))
         self.signal_labels["ma240"].setText(money(latest.get("ma240")))
-        self.signal_labels["volume"].setText(f'{(latest.get("volume") or 0):,}주')
+        volume = latest.get("volume") or 0
+        volume_average = latest.get("volume_ma20")
+        volume_ratio = latest.get("volume_ratio")
+        volume_text = f'{volume:,}주'
+        if volume_average is not None:
+            volume_text += f' / {volume_average:,.0f}주'
+        if volume_ratio is not None:
+            volume_text += f' ({volume_ratio:.2f}배)'
+        self.signal_labels["volume"].setText(volume_text)
         self.signal_labels["bb"].setText(
             f'{money(latest.get("bb_lower"))} ~ {money(latest.get("bb_upper"))}'
         )
