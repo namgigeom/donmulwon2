@@ -50,7 +50,15 @@ type MarketBulletin = {
 };
 
 type MarketCode = "KOSPI" | "KOSDAQ";
-type Candle = { date: string; "시가": number | null; "고가": number | null; "저가": number | null; "종가": number | null };
+type Candle = {
+  date: string;
+  "시가": number | null; "고가": number | null; "저가": number | null; "종가": number | null;
+  "거래량"?: number | null;
+  MA10?: number | null; MA20?: number | null; MA60?: number | null;
+  BB_UPPER?: number | null; BB_MIDDLE?: number | null; BB_LOWER?: number | null;
+  MACD?: number | null; MACD_SIGNAL?: number | null; MACD_HIST?: number | null;
+  RSI10?: number | null; RSI14?: number | null;
+};
 type StockAnalysis = { ticker: string; name: string; trading_date: string; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 
 function formatCount(value: number | undefined) {
@@ -64,26 +72,80 @@ function formatTradingValue(value: number | undefined) {
 }
 
 function PriceChart({ bars }: { bars: Candle[] }) {
-  const rows = bars.filter((b) => [b['시가'], b['고가'], b['저가'], b['종가']].every((v) => typeof v === 'number' && Number.isFinite(v)));
-  if (!rows.length) return <div className='chart-empty-content'><b>선택한 주기의 차트 데이터가 없습니다.</b></div>;
-  const width = 720, height = 250, pad = 18;
-  const max = Math.max(...rows.map((b) => b['고가'] as number));
-  const min = Math.min(...rows.map((b) => b['저가'] as number));
-  const range = max - min || 1, plot = height - pad * 2, step = (width - pad * 2) / rows.length;
-  const candleWidth = Math.max(2, Math.min(9, step * 0.62));
-  const y = (v: number) => pad + ((max - v) / range) * plot;
-  return <div className='price-chart-wrap'>
-    <div className='chart-price-labels'><span>고가 {max.toLocaleString('ko-KR')}</span><span>저가 {min.toLocaleString('ko-KR')}</span></div>
-    <svg className='price-chart' viewBox='0 0 720 250' role='img' aria-label='캔들 차트'>
-      {[0, 1, 2, 3].map((n) => <line key={n} x1={pad} x2={width-pad} y1={pad+plot*n/3} y2={pad+plot*n/3} className='price-chart-grid' />)}
-      {rows.map((bar, index) => {
-        const open = bar['시가'] as number, high = bar['고가'] as number, low = bar['저가'] as number, close = bar['종가'] as number;
-        const x = pad + step * index + step / 2, up = close >= open;
-        const top = Math.min(y(open), y(close)), body = Math.max(2, Math.abs(y(open)-y(close)));
-        return <g key={bar.date}><line x1={x} x2={x} y1={y(high)} y2={y(low)} className={up ? 'candle-wick up' : 'candle-wick down'} /><rect x={x-candleWidth/2} y={top} width={candleWidth} height={body} className={up ? 'candle-body up' : 'candle-body down'} /></g>;
+  const rows = bars.filter((b) => [b["시가"], b["고가"], b["저가"], b["종가"]].every((v) => typeof v === "number" && Number.isFinite(v)));
+  if (!rows.length) return <div className="chart-empty-content"><b>선택한 주기의 차트 데이터가 없습니다.</b></div>;
+
+  const width = 900, left = 58, right = 16, plotWidth = width - left - right;
+  const step = plotWidth / rows.length;
+  const candleWidth = Math.max(2, Math.min(10, step * 0.62));
+  const numeric = (v: number | null | undefined) => typeof v === "number" && Number.isFinite(v) ? v : null;
+  const priceValues = rows.flatMap((b) => [numeric(b["고가"]), numeric(b["저가"]), numeric(b.BB_UPPER), numeric(b.BB_LOWER), numeric(b.MA10), numeric(b.MA20), numeric(b.MA60)]).filter((v): v is number => v !== null);
+  const minPrice = Math.min(...priceValues), maxPrice = Math.max(...priceValues);
+  const pricePad = (maxPrice - minPrice || 1) * 0.08;
+  const pMin = minPrice - pricePad, pMax = maxPrice + pricePad;
+  const priceY = (v: number) => 12 + ((pMax - v) / (pMax - pMin || 1)) * 216;
+  const xAt = (i: number) => left + step * i + step / 2;
+  const linePath = (key: keyof Candle, yFn: (v: number) => number) => {
+    let path = "", drawing = false;
+    rows.forEach((bar, i) => {
+      const value = numeric(bar[key] as number | null | undefined);
+      if (value === null) { drawing = false; return; }
+      path += `${drawing ? " L" : " M"} ${xAt(i).toFixed(2)} ${yFn(value).toFixed(2)}`;
+      drawing = true;
+    });
+    return path;
+  };
+  const volumeMax = Math.max(1, ...rows.map((b) => numeric(b["거래량"]) ?? 0));
+  const macdValues = rows.flatMap((b) => [numeric(b.MACD), numeric(b.MACD_SIGNAL), numeric(b.MACD_HIST)]).filter((v): v is number => v !== null);
+  const macdAbs = Math.max(1, ...macdValues.map(Math.abs)) * 1.15;
+  const macdY = (v: number) => 42 + ((macdAbs - v) / (2 * macdAbs)) * 66;
+  const rsiY = (v: number) => 20 + ((100 - v) / 100) * 76;
+  const dateLabel = (value: string) => value?.slice(2) ?? "";
+
+  return <div className="technical-chart">
+    <div className="chart-legend">
+      <span><i className="legend-candle-up" /> 상승</span><span><i className="legend-candle-down" /> 하락</span>
+      <span className="legend-ma10">MA10</span><span className="legend-ma20">MA20</span><span className="legend-ma60">MA60</span><span className="legend-bb">볼린저밴드(20,2)</span>
+    </div>
+    <div className="chart-panel-title"><b>가격 · OHLC</b><span>{rows.length}개 봉</span></div>
+    <svg className="technical-svg price-svg" viewBox={`0 0 ${width} 240`} role="img" aria-label="이동평균선과 볼린저밴드가 표시된 캔들 차트">
+      {[0,1,2,3,4].map(n => <g key={n}><line x1={left} x2={width-right} y1={12+n*54} y2={12+n*54} className="technical-grid"/><text x={left-8} y={16+n*54} textAnchor="end" className="axis-label">{Math.round(pMax-(pMax-pMin)*n/4).toLocaleString("ko-KR")}</text></g>)}
+      <path d={linePath("BB_UPPER",priceY)} className="indicator-line bb-line"/>
+      <path d={linePath("BB_MIDDLE",priceY)} className="indicator-line bb-mid-line"/>
+      <path d={linePath("BB_LOWER",priceY)} className="indicator-line bb-line"/>
+      <path d={linePath("MA60",priceY)} className="indicator-line ma60-line"/>
+      <path d={linePath("MA20",priceY)} className="indicator-line ma20-line"/>
+      <path d={linePath("MA10",priceY)} className="indicator-line ma10-line"/>
+      {rows.map((bar,i) => {
+        const open=numeric(bar["시가"])!, high=numeric(bar["고가"])!, low=numeric(bar["저가"])!, close=numeric(bar["종가"])!;
+        const up=close>=open, x=xAt(i), top=Math.min(priceY(open),priceY(close)), body=Math.max(1.5,Math.abs(priceY(open)-priceY(close)));
+        return <g key={bar.date}><line x1={x} x2={x} y1={priceY(high)} y2={priceY(low)} className={up?"candle-wick up":"candle-wick down"}/><rect x={x-candleWidth/2} y={top} width={candleWidth} height={body} className={up?"candle-body up":"candle-body down"}/></g>;
       })}
     </svg>
-    <div className='chart-date-labels'><span>{rows[0].date}</span><span>{rows[rows.length-1].date}</span></div>
+    <div className="chart-date-axis"><span>{rows[0].date}</span><span>{rows[Math.floor(rows.length/2)].date}</span><span>{rows[rows.length-1].date}</span></div>
+
+    <div className="chart-panel-title subchart-title"><b>거래량</b><span>거래량 막대</span></div>
+    <svg className="technical-svg volume-svg" viewBox={`0 0 ${width} 76`} role="img" aria-label="거래량 차트">
+      {[0,1,2].map(n=><line key={n} x1={left} x2={width-right} y1={8+n*28} y2={8+n*28} className="technical-grid"/>)}
+      {rows.map((bar,i)=>{const volume=numeric(bar["거래량"])??0, up=(numeric(bar["종가"])??0)>=(numeric(bar["시가"])??0), h=volume/volumeMax*60;return <rect key={bar.date} x={xAt(i)-candleWidth/2} y={70-h} width={candleWidth} height={h} className={up?"volume-bar up":"volume-bar down"}/>;})}
+    </svg>
+
+    <div className="chart-panel-title subchart-title"><b>MACD (5, 10, 9)</b><span>MACD · Signal · Histogram</span></div>
+    <svg className="technical-svg indicator-svg" viewBox={`0 0 ${width} 120`} role="img" aria-label="MACD 보조지표">
+      <line x1={left} x2={width-right} y1={75} y2={75} className="zero-line"/>
+      {rows.map((bar,i)=>{const v=numeric(bar.MACD_HIST)??0, y=macdY(v), zero=macdY(0);return <rect key={bar.date} x={xAt(i)-candleWidth/2} y={Math.min(y,zero)} width={candleWidth} height={Math.max(1,Math.abs(zero-y))} className={v>=0?"macd-positive":"macd-negative"/>;})}
+      <path d={linePath("MACD",macdY)} className="indicator-line macd-line"/>
+      <path d={linePath("MACD_SIGNAL",macdY)} className="indicator-line signal-line"/>
+    </svg>
+
+    <div className="chart-panel-title subchart-title"><b>RSI (10 / 14)</b><span>과매수 70 · 과매도 30</span></div>
+    <svg className="technical-svg indicator-svg" viewBox={`0 0 ${width} 112`} role="img" aria-label="RSI 보조지표">
+      {[30,50,70].map(v=><g key={v}><line x1={left} x2={width-right} y1={rsiY(v)} y2={rsiY(v)} className={v===50?"zero-line":"threshold-line"}/><text x={left-8} y={rsiY(v)+3} textAnchor="end" className="axis-label">{v}</text></g>)}
+      <path d={linePath("RSI14",rsiY)} className="indicator-line rsi14-line"/>
+      <path d={linePath("RSI10",rsiY)} className="indicator-line rsi10-line"/>
+    </svg>
+    <div className="chart-date-axis"><span>{dateLabel(rows[0].date)}</span><span>{dateLabel(rows[rows.length-1].date)}</span></div>
+    <div className="indicator-legend"><span className="legend-rsi10">RSI10</span><span className="legend-rsi14">RSI14</span><span className="legend-macd">MACD</span><span className="legend-signal">Signal</span></div>
   </div>;
 }
 function App() {
@@ -296,9 +358,9 @@ function App() {
               <article className="panel chart-panel">
                 <div className="section-heading compact">
                   <div><span className="section-kicker">TECHNICAL ANALYSIS DESK</span><h2>차트 분석 모니터</h2></div>
-                  <form className="chart-controls" onSubmit={(event) => { event.preventDefault(); if (!/^\d{6}$/.test(tickerInput)) { setStockError("종목코드 6자리를 입력해 주세요."); return; } setSelectedTicker(tickerInput); }}><input aria-label="종목코드" value={tickerInput} onChange={(event) => setTickerInput(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="종목코드 6자리" maxLength={6} /><button type="submit" disabled={stockLoading}>조회</button><div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div></form>
+                  <form className="chart-controls" onSubmit={(event) => { event.preventDefault(); if (!/^\d{6}$/.test(tickerInput)) { setStockError("종목코드 6자리를 입력해 주세요."); return; } setSelectedTicker(tickerInput); }}><label className="ticker-search"><Search size={15}/><input aria-label="종목코드" value={tickerInput} onChange={(event) => setTickerInput(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="종목코드 6자리" maxLength={6} /></label><button className="ticker-submit" type="submit" disabled={stockLoading}>{stockLoading ? "조회 중" : "종목 조회"}</button><div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div></form>
                 </div>
-                <div className="chart-empty">
+                <div className="chart-empty chart-workspace">
                   <div className="chart-grid-lines"><i /><i /><i /><i /></div>
                   {stockLoading ? <div className="chart-empty-content"><b>종목 데이터 조회 중…</b></div> : stockError ? <div className="chart-empty-content"><b>{stockError}</b></div> : stockAnalysis ? <PriceChart bars={activeBars} /> : <div className="chart-empty-content"><CandlestickChart size={25} /><b>종목 조회 대기</b><span>예: 삼성전자 005930 · 종목코드 입력 후 조회</span></div>}
                 </div>
