@@ -60,7 +60,7 @@ type Candle = {
   MACD?: number | null; MACD_SIGNAL?: number | null; MACD_HIST?: number | null;
   RSI10?: number | null; RSI14?: number | null;
 };
-type StockAnalysis = { ticker: string; name: string; trading_date: string; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; latest?:{trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
+type StockAnalysis = { ticker: string; name: string; trading_date: string; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{grade?:string;grade_score?:number;grade_reason?:string;trend?:string}; latest?:{close?:number;change_pct?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
 type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
@@ -194,6 +194,10 @@ function PriceChart({ bars }: { bars: Candle[] }) {
   </div>;
 }
 function App() {
+  const [activePage, setActivePage] = useState<"dashboard" | "stock-analysis" | "history">("dashboard");
+  const [historyItems, setHistoryItems] = useState<Array<{analyzed_at:string;ticker:string;name:string;trading_date:string;matched:boolean;baseline_price?:number|null;current_price?:number|null;change_pct?:number|null;weekly?:{grade?:string};trade_plan?:unknown}>>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
   const [chartPeriod, setChartPeriod] = useState<"daily" | "weekly">("daily");
   const [tickerInput, setTickerInput] = useState("");
   const [selectedTicker, setSelectedTicker] = useState("");
@@ -243,7 +247,8 @@ function App() {
   function openCandidate(item: ScanMatch) {
     setTickerInput(item.ticker);
     setSelectedTicker(item.ticker);
-    document.getElementById("chart-desk")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setChartPeriod("daily");
+    setActivePage("stock-analysis");
   }
 
   useEffect(() => {
@@ -285,6 +290,25 @@ function App() {
     return () => controller.abort();
   }, []);
 
+
+  useEffect(() => {
+    if (activePage !== "history") return;
+    const controller = new AbortController();
+    async function loadHistory() {
+      setHistoryLoading(true); setHistoryError("");
+      try {
+        const response = await fetch(apiBase + "/api/history", { signal: controller.signal });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.detail || "분석 기록을 불러오지 못했습니다.");
+        setHistoryItems(Array.isArray(payload.items) ? payload.items : []);
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setHistoryError(error instanceof Error ? error.message : "분석 기록 조회 실패");
+      } finally { if (!controller.signal.aborted) setHistoryLoading(false); }
+    }
+    void loadHistory();
+    return () => controller.abort();
+  }, [activePage]);
 
   useEffect(() => {
     if (!selectedTicker) return;
@@ -335,13 +359,19 @@ function App() {
 
         <nav className="nav-groups" aria-label="주요 메뉴">
           <p className="nav-caption">WORKSPACE</p>
-          {mainNav.map(({ label, icon: Icon, active }) => (
-            <a className={active ? "nav-link active" : "nav-link"} href={label === "시장 스캐너" ? "#market-scanner" : "#"} key={label}>
-              <Icon size={17} strokeWidth={1.8} />
-              <span>{label}</span>
+          {mainNav.map(({ label, icon: Icon }) => {
+            const page = label === "종목 분석" ? "stock-analysis" : label === "분석 기록" ? "history" : "dashboard";
+            const selected = label !== "시장 스캐너" && activePage === page;
+            return <button type="button" className={selected ? "nav-link active" : "nav-link"} onClick={() => {
+              if (label === "시장 스캐너") {
+                setActivePage("dashboard");
+                window.setTimeout(() => document.getElementById("market-scanner")?.scrollIntoView({ behavior: "smooth" }), 0);
+              } else setActivePage(page as "dashboard" | "stock-analysis" | "history");
+            }} key={label}>
+              <Icon size={17} strokeWidth={1.8} /><span>{label}</span>
               {label === "시장 스캐너" && <span className="nav-count">SCAN</span>}
-            </a>
-          ))}
+            </button>;
+          })}
 
           <p className="nav-caption market-caption">MARKET</p>
           {marketNav.map(({ label, icon: Icon }) => (
@@ -365,7 +395,7 @@ function App() {
 
       <section className="main-area">
         <header className="topbar">
-          <div className="breadcrumb"><span>WORKSPACE</span><b>/</b> 대시보드</div>
+          <div className="breadcrumb"><span>WORKSPACE</span><b>/</b> {activePage === "stock-analysis" ? "종목 분석" : activePage === "history" ? "분석 기록" : "대시보드"}</div>
           <div className="top-actions">
             <span className="market-status"><i /> {apiStatus}</span>
             <button className="icon-button" aria-label="알림"><Bell size={17} /><i /></button>
@@ -374,6 +404,7 @@ function App() {
         </header>
 
         <div className="page-content">
+          {activePage === "dashboard" && <>
           <section className="welcome-row">
             <div>
               <div className="eyebrow"><span className="eyebrow-line" /> YOUR PRIVATE MARKET OFFICE</div>
@@ -590,6 +621,66 @@ function App() {
           </section>
 
           <footer className="page-footer"><span>© 2026 DONMULWON 2</span><span>DATA FIRST · RISK AWARE · NO AUTO TRADING</span></footer>
+          </>}
+          {activePage === "stock-analysis" && <section className="stock-analysis-page">
+            <div className="page-title-row"><div><span className="section-kicker">DEEP TECHNICAL ANALYSIS</span><h1>종목 분석</h1><p>너구리 분석실과 분리된 종목 전용 분석 화면입니다.</p></div><span className="single-agent">DAILY · WEEKLY · RISK PLAN</span></div>
+            <article className="panel stock-analysis-main">
+              <div className="stock-analysis-toolbar">
+                <form className="chart-controls" onSubmit={(event) => { event.preventDefault(); if (!/^\d{6}$/.test(tickerInput)) { setStockError("종목코드 6자리를 입력해 주세요."); return; } setSelectedTicker(tickerInput); }}>
+                  <label className="ticker-search"><Search size={16}/><input aria-label="종목코드" value={tickerInput} onChange={(event) => setTickerInput(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="종목코드 6자리" maxLength={6} /></label>
+                  <button className="ticker-submit" type="submit" disabled={stockLoading}>{stockLoading ? "조회 중…" : "종목 분석"}</button>
+                </form>
+                <div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div>
+              </div>
+              {stockLoading && <div className="scanner-state"><span className="loading-pulse" /> 종목 데이터와 기술지표를 불러오는 중입니다.</div>}
+              {stockError && <div className="scanner-state error">{stockError}</div>}
+              {!stockAnalysis && !stockLoading && <div className="stock-analysis-empty"><CandlestickChart size={34}/><b>분석할 종목을 조회하세요.</b><span>예: 삼성전자 005930 · 종목코드 6자리</span></div>}
+              {stockAnalysis && <>
+                <div className="stock-identity"><div><h2>{stockAnalysis.name} <small>{stockAnalysis.ticker}</small></h2><span>기준일 {stockAnalysis.trading_date} · {stockAnalysis.weekly?.trend ?? "주봉 추세 확인 중"}</span></div>
+                  <div className="stock-last-price"><b>{stockAnalysis.latest?.close?.toLocaleString("ko-KR") ?? "—"}원</b><small>전일 대비 {typeof stockAnalysis.latest?.change_pct === "number" ? (stockAnalysis.latest.change_pct > 0 ? "+" : "") + stockAnalysis.latest.change_pct.toFixed(2) + "%" : "—"}</small></div></div>
+                <div className="stock-large-chart"><PriceChart bars={activeBars}/></div>
+                <div className="stock-detail-grid">
+                  <section className="stock-detail-card"><div className="section-heading compact"><div><span className="section-kicker">ENTRY CONDITIONS</span><h2>종목 발굴조건</h2></div><ShieldCheck size={18}/></div>
+                    {[
+                      ["RSI(10) > RSI(14) 상향 교차 및 동반 상승","rsi_cross_and_rising"],
+                      ["MACD(5/10/9) 시그널 상향 교차 및 상승","macd_cross_and_rising"],
+                      ["종가 MA10 상향 돌파","ma10_breakout"],
+                    ].map(([label,key], index) => <div className="analysis-condition" key={key}><span>{String(index+1).padStart(2,"0")}</span><b>{label}</b><strong className={stockAnalysis.signal?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.signal?.checks?.[key] ? "충족" : "미충족"}</strong></div>)}
+                    <div className="analysis-condition"><span>04</span><b>종가가 MA240 이상</b><strong className={typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" && stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "check-pass" : "check-fail"}>{typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" ? (stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "통과" : "제외") : "판정 불가"}</strong></div>
+                    <div className="weekly-grade-card"><span>주봉 추세 등급</span><b className={"grade-badge grade-" + (stockAnalysis.weekly?.grade ?? "C").toLowerCase()}>{stockAnalysis.weekly?.grade ?? "C"}</b><strong>{stockAnalysis.weekly?.grade_score ?? 0}점 · {stockAnalysis.weekly?.trend ?? "데이터 부족"}</strong><small>{stockAnalysis.weekly?.grade_reason ?? "주봉 데이터가 부족합니다."}</small></div>
+                  </section>
+                  <section className="stock-detail-card"><div className="section-heading compact"><div><span className="section-kicker">TRADE PLAN</span><h2>진입 · 손절 · 익절 기준</h2></div><ShieldAlert size={18}/></div>
+                    {stockAnalysis.latest?.trade_plan?.ready ? <div className="trade-level-grid">
+                      <div><small>진입 참고 구간</small><b>{Math.round(stockAnalysis.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ {Math.round(stockAnalysis.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}</b></div>
+                      <div><small>손절 기준</small><b className="negative">{Math.round(stockAnalysis.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")}원</b></div>
+                      <div><small>목표 1 · 2R</small><b className="positive">{Math.round(stockAnalysis.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}원</b></div>
+                      <div><small>목표 2 · 3R</small><b className="positive">{Math.round(stockAnalysis.latest.trade_plan.target_2 ?? 0).toLocaleString("ko-KR")}원</b></div>
+                    </div> : <div className="scanner-state">ATR/종가 데이터 부족으로 가격 기준을 계산할 수 없습니다.</div>}
+                    <div className="stock-metric-grid">
+                      <div><small>MA10 / MA20</small><b>{stockAnalysis.latest?.ma10?.toLocaleString("ko-KR") ?? "—"} / {stockAnalysis.latest?.ma20?.toLocaleString("ko-KR") ?? "—"}</b></div>
+                      <div><small>MA60 / MA240</small><b>{stockAnalysis.latest?.ma60?.toLocaleString("ko-KR") ?? "—"} / {stockAnalysis.latest?.ma240?.toLocaleString("ko-KR") ?? "—"}</b></div>
+                      <div><small>RSI10 / RSI14</small><b>{stockAnalysis.latest?.rsi10?.toFixed(1) ?? "—"} / {stockAnalysis.latest?.rsi14?.toFixed(1) ?? "—"}</b></div>
+                      <div><small>MACD / Signal</small><b>{stockAnalysis.latest?.macd?.toFixed(2) ?? "—"} / {stockAnalysis.latest?.macd_signal?.toFixed(2) ?? "—"}</b></div>
+                      <div><small>거래량 / 10일 평균</small><b>{stockAnalysis.latest?.volume_ratio?.toFixed(2) ?? "—"}x</b></div>
+                      <div><small>ATR14</small><b>{stockAnalysis.latest?.atr14?.toFixed(2) ?? "—"}</b></div>
+                      <div><small>20일 지지 / 저항</small><b>{stockAnalysis.latest?.support20?.toLocaleString("ko-KR") ?? "—"} / {stockAnalysis.latest?.resistance20?.toLocaleString("ko-KR") ?? "—"}</b></div>
+                      <div><small>52주 고점 대비</small><b>{stockAnalysis.latest?.drawdown52w_pct?.toFixed(2) ?? "—"}%</b></div>
+                    </div>
+                    <p className="stock-plan-warning">{stockAnalysis.latest?.trade_plan?.warning ?? "ATR 기반 참고값이며 실제 체결가격이나 손실을 보장하지 않습니다."}</p>
+                  </section>
+                </div>
+              </>}
+            </article>
+          </section>}
+          {activePage === "history" && <section className="history-page">
+            <div className="page-title-row"><div><span className="section-kicker">RECENT RESEARCH LOG</span><h1>분석 기록</h1><p>분석한 날의 종가와 현재 종가를 비교합니다. 기록은 분석 시점부터 5일간 보관됩니다.</p></div><span className="history-retention">최근 5일 보관</span></div>
+            {historyLoading && <div className="scanner-state"><span className="loading-pulse" /> 분석 기록과 현재 시세를 확인하고 있습니다.</div>}
+            {historyError && <div className="scanner-state error">{historyError}</div>}
+            {!historyLoading && !historyError && historyItems.length === 0 && <div className="panel history-empty"><BookOpen size={32}/><b>최근 5일 내 분석 기록이 없습니다.</b><span>종목분석 페이지에서 종목을 조회하면 이곳에 기록됩니다.</span></div>}
+            {historyItems.length > 0 && <div className="panel history-table-wrap"><table className="history-table"><thead><tr><th>분석 일시</th><th>종목</th><th>분석 당시 종가</th><th>현재 종가</th><th>분석 후 등락률</th><th>주봉 등급</th><th></th></tr></thead><tbody>{historyItems.map((item,index)=><tr key={item.ticker + item.analyzed_at + index}><td>{new Date(item.analyzed_at).toLocaleString("ko-KR")}</td><td><b>{item.name}</b><small>{item.ticker}</small></td><td>{item.baseline_price?.toLocaleString("ko-KR") ?? "—"}원</td><td>{item.current_price?.toLocaleString("ko-KR") ?? "시세 미수신"}</td><td className={typeof item.change_pct === "number" ? item.change_pct > 0 ? "positive" : item.change_pct < 0 ? "negative" : "" : ""}>{typeof item.change_pct === "number" ? (item.change_pct > 0 ? "+" : "") + item.change_pct.toFixed(2) + "%" : "계산 불가"}</td><td><span className={"grade-badge grade-" + (item.weekly?.grade ?? "C").toLowerCase()}>{item.weekly?.grade ?? "C"}</span></td><td><button type="button" className="row-action" onClick={()=>{setTickerInput(item.ticker);setSelectedTicker(item.ticker);setActivePage("stock-analysis");}}>다시 분석</button></td></tr>)}</tbody></table></div>}
+            <div className="scanner-footnote">등락률 = (현재 종가 ÷ 분석 당시 종가 - 1) × 100. 휴장일·시세 제공자 오류 등으로 현재가를 확인하지 못하면 계산 불가로 표시합니다.</div>
+          </section>}
+
         </div>
       </section>
     </main>
