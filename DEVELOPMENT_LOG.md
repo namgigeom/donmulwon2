@@ -303,3 +303,11 @@
 - CI: Python 검사와 별개로 web 폴더에서 npm install 및 npm run build를 수행하도록 워크플로를 확장했다. ATR 기반 가격 계산 단위 테스트를 추가했다.
 - 검증: GitHub 파일 변경 반영. GitHub Actions 실행 결과 및 실제 KRX 전체 스캔은 확인 전이다. 스캔 데이터는 KRX(pykrx) 기반이며 거래일/시세 제공자 상태에 따라 전체 소요 시간이 달라진다.
 - 안전: 자동 주문/매매는 추가하지 않았다.
+
+
+## 13. 프론트엔드 엄격 빌드 오류 수정
+- 날짜: 2026-11-14
+- 작업: web/src/App.tsx
+- 발견: CI에서 npm run build가 미사용 TrendingUp import 및 Boolean 변수만으로는 TypeScript가 좁히지 못하는 선택적 KOSPI/KOSDAQ 객체 접근을 보고했다.
+- 수정: 미사용 import 제거, 각 데이터 객체의 존재 여부를 직접 확인하는 조건식으로 합계 계산을 변경했다.
+- 검증: 수정 커밋 이후 신규 GitHub Actions 빌드 결과 대기 중.
