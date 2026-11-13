@@ -166,42 +166,41 @@ function App() {
             </article>
 
             <div className="right-column">
-              <article className="panel analyst-panel">
+              <article className="panel chart-panel">
                 <div className="section-heading compact">
-                  <div><span className="section-kicker">AI ANALYST</span><h2>너구리</h2></div>
-                  <span className="single-agent">ONLY ONE</span>
+                  <div><span className="section-kicker">MARKET MOMENTUM</span><h2>시장 추세 모니터</h2></div>
+                  <span className="period-select">주봉 · 일봉 <ChevronDown size={13} /></span>
                 </div>
-                <div className="analyst-profile">
-                  <div className="analyst-avatar">🦝</div>
-                  <div><b>수석 기술·시장 애널리스트</b><small>DONMULWON RESEARCH</small></div>
+                <div className="chart-empty">
+                  <div className="chart-grid-lines"><i /><i /><i /><i /></div>
+                  <div className="chart-empty-content"><TrendingUp size={23} /><b>시장 데이터 연결 후 표시됩니다</b><span>주봉으로 큰 추세를, 일봉으로 스윙 후보를 확인합니다.</span></div>
                 </div>
-                <p className="analyst-message">“시장은 매일 기회를 주지 않습니다. 조건이 맞을 때까지 기다리겠습니다.”</p>
-                <div className="analyst-footer"><span><i /> 대기 중</span><span>OPENROUTER 연결 예정</span></div>
-              </article>
-
-              <article className="panel signal-panel">
-                <div className="section-heading compact">
-                  <div><span className="section-kicker">CORE STRATEGY</span><h2>종목 발굴 조건</h2></div>
-                  <ShieldCheck size={18} />
-                </div>
-                <div className="signal-row"><span className="signal-index">01</span><span><b>RSI 골든크로스</b><small>RSI(10) ↑ RSI(14) · 동반 상승</small></span><span className="signal-pending">대기</span></div>
-                <div className="signal-row"><span className="signal-index">02</span><span><b>MACD 골든크로스</b><small>MACD(5/10/9) · 상승 확인</small></span><span className="signal-pending">대기</span></div>
-                <div className="signal-row"><span className="signal-index">03</span><span><b>MA10 상향 돌파</b><small>종가 기준 돌파 확인</small></span><span className="signal-pending">대기</span></div>
-                <div className="strategy-note"><Sparkles size={14} /> 세 가지 조건을 모두 충족해야 발굴 후보가 됩니다.</div>
               </article>
             </div>
           </section>
 
           <section className="bottom-grid">
-            <article className="panel chart-panel">
+            <article className="panel analyst-panel">
               <div className="section-heading compact">
-                <div><span className="section-kicker">MARKET MOMENTUM</span><h2>시장 추세 모니터</h2></div>
-                <span className="period-select">일봉 <ChevronDown size={13} /></span>
+                <div><span className="section-kicker">AI ANALYST</span><h2>너구리</h2></div>
+                <span className="single-agent">ONLY ONE</span>
               </div>
-              <div className="chart-empty">
-                <div className="chart-grid-lines"><i /><i /><i /><i /></div>
-                <div className="chart-empty-content"><TrendingUp size={23} /><b>시장 데이터 연결 후 표시됩니다</b><span>실제 시세가 연결되기 전까지 임의의 차트를 표시하지 않습니다.</span></div>
+              <div className="analyst-profile">
+                <div className="analyst-avatar">🦝</div>
+                <div><b>수석 기술·시장 애널리스트</b><small>DONMULWON RESEARCH</small></div>
               </div>
+              <p className="analyst-message">“시장은 매일 기회를 주지 않습니다. 조건이 맞을 때까지 기다리겠습니다.”</p>
+              <div className="analyst-footer"><span><i /> 대기 중</span><span>OPENROUTER 연결 예정</span></div>
+            </article>
+            <article className="panel signal-panel">
+              <div className="section-heading compact">
+                <div><span className="section-kicker">CORE STRATEGY</span><h2>종목 발굴 조건</h2></div>
+                <ShieldCheck size={18} />
+              </div>
+              <div className="signal-row"><span className="signal-index">01</span><span><b>RSI 골든크로스</b><small>RSI(10) ↑ RSI(14) · 동반 상승</small></span><span className="signal-pending">대기</span></div>
+              <div className="signal-row"><span className="signal-index">02</span><span><b>MACD 골든크로스</b><small>MACD(5/10/9) · 상승 확인</small></span><span className="signal-pending">대기</span></div>
+              <div className="signal-row"><span className="signal-index">03</span><span><b>MA10 상향 돌파</b><small>종가 기준 돌파 확인</small></span><span className="signal-pending">대기</span></div>
+              <div className="strategy-note"><Sparkles size={14} /> 세 가지 조건을 모두 충족해야 발굴 후보가 됩니다.</div>
             </article>
             <article className="panel checklist-panel">
               <div className="section-heading compact">
