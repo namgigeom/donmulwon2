@@ -253,8 +253,9 @@ class Dashboard(QWidget):
 
         self._text(p, 900, 618, self._summary_line(), 17, "#193b69", True)
         self._text(p, 900, 645, self._summary_second_line(), 16, "#193b69", True)
-        date = self.last_update or "거래일 확인 중"
-        self._text(p, 1250, 651, date[-5:], 10, "#735b48", False)
+        date = self.last_update or ""
+        date_label = f"{date[4:6]}/{date[6:]}" if len(date) == 8 else "거래일 확인 중"
+        self._text(p, 1250, 651, date_label, 10, "#735b48", False)
 
     def _paint_checklist(self, p):
         # Existing checklist frame and heading stay untouched.
@@ -369,6 +370,13 @@ class Dashboard(QWidget):
         if point is None:
             return
         x, y = point
+        if 450 <= x <= 927 and 709 <= y <= 891 and self.scan_data.get("matches"):
+            matches = self.scan_data["matches"]
+            row = 0 if y < 850 else min(1, len(matches)-1)
+            ticker = matches[row].get("ticker", "")
+            if ticker:
+                self._run_worker("ticker", ticker=ticker)
+            return
         if 1480 <= x <= 1638:
             if 145 <= y <= 286:
                 self._refresh_market()
