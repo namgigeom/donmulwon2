@@ -47,6 +47,7 @@ type MarketBulletin = {
   trading_value: number;
   index?: { name: string; close: number; change: number; change_pct: number; trend: number[] } | null;
   sectors?: { name: string; change_pct: number; stock_count: number; market: string }[];
+  investor_flows?: { values?: Record<string, number> } | null;
 };
 
 type MarketCode = "ALL" | "KOSPI" | "KOSDAQ";
@@ -73,6 +74,46 @@ function formatTradingValue(value: number | undefined) {
   return typeof value === "number"
     ? `${(value / 100000000).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}억`
     : "—";
+}
+
+function buildMarketNarrative(kospi?: MarketBulletin, kosdaq?: MarketBulletin) {
+  if (!kospi || !kosdaq) return "코스피·코스닥 지수와 업종·수급 데이터를 모두 받은 뒤 장세를 요약합니다.";
+
+  const markets = [kospi, kosdaq];
+  const indexMoves = markets.map((item) => item.index?.change_pct).filter((v): v is number => typeof v === "number");
+  const allUp = indexMoves.length === 2 && indexMoves.every((v) => v > 0);
+  const allDown = indexMoves.length === 2 && indexMoves.every((v) => v < 0);
+  const indexPhrase = allUp ? "코스피와 코스닥이 동반 상승했고"
+    : allDown ? "코스피와 코스닥이 동반 하락했고"
+      : indexMoves.length === 2 ? "코스피와 코스닥이 엇갈린 흐름을 보였고"
+        : "지수 방향을 온전히 확인하기 어렵고";
+
+  const sectors = markets.flatMap((item) => item.sectors ?? []);
+  const sector = [...sectors].sort((a, b) => allDown
+    ? a.change_pct - b.change_pct
+    : b.change_pct - a.change_pct)[0];
+  const sectorPhrase = sector && ((allDown && sector.change_pct < 0) || (!allDown && sector.change_pct > 0))
+    ? `${sector.name} 업종이 ${sector.change_pct > 0 ? "+" : ""}${sector.change_pct.toFixed(2)}%로 ${allDown ? "낙폭이 컸고" : "강세를 주도했으며"}`
+    : "";
+
+  const flows: Record<string, number> = {};
+  for (const item of markets) {
+    for (const [name, value] of Object.entries(item.investor_flows?.values ?? {})) {
+      flows[name] = (flows[name] ?? 0) + value;
+    }
+  }
+  const investorNames = ["개인", "외국인", "기관합계"];
+  const flowParts = investorNames.filter((name) => typeof flows[name] === "number" && flows[name] !== 0)
+    .map((name) => `${name} ${flows[name] > 0 ? "순매수" : "순매도"}`);
+  const flowPhrase = flowParts.length ? `${flowParts.join("·")} 흐름이 나타났고` : "";
+
+  const adv = kospi.advancers + kosdaq.advancers;
+  const dec = kospi.decliners + kosdaq.decliners;
+  const breadthPhrase = adv > dec ? `상승 종목이 ${(adv - dec).toLocaleString("ko-KR")}개 더 많아 종목 확산도 양호했습니다.`
+    : dec > adv ? `하락 종목이 ${(dec - adv).toLocaleString("ko-KR")}개 더 많아 시장 내부 체력은 약했습니다.`
+      : "상승·하락 종목 수가 비슷해 종목 확산은 중립적이었습니다.";
+  const closePhrase = allUp ? "상승 마감했습니다." : allDown ? "하락 마감했습니다." : "혼조세로 마감했습니다.";
+  return [indexPhrase, sectorPhrase, flowPhrase, breadthPhrase, closePhrase].filter(Boolean).join(" ");
 }
 
 function PriceChart({ bars }: { bars: Candle[] }) {
@@ -456,13 +497,7 @@ function App() {
                 </div>
                 <div className="market-one-line">
                   <span className="one-line-label">MARKET IN ONE LINE</span>
-                  <p>{bothMarketsReady
-                    ? totalAdvancers! > totalDecliners!
-                      ? `상승 종목이 하락 종목보다 ${formatCount(totalAdvancers! - totalDecliners!)}개 많아 시장 breadth가 우세합니다.`
-                      : totalAdvancers! < totalDecliners!
-                        ? `하락 종목이 상승 종목보다 ${formatCount(totalDecliners! - totalAdvancers!)}개 많아 시장 breadth가 약합니다.`
-                        : "상승과 하락 종목 수가 같아 시장 breadth가 중립입니다."
-                    : "KOSPI·KOSDAQ 시장 데이터 수신 후 시장 한 줄 요약을 제공합니다."}</p>
+                  <p>{buildMarketNarrative(kospi, kosdaq)}</p>
                 </div>
               </article>
             </div>
