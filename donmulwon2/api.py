@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import re
+import threading
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +18,39 @@ app = FastAPI(
     version="0.1.0",
     description="Read-only web API for Korean stock screening and technical analysis.",
 )
+
+_scan_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="donmulwon-scan")
+_scan_jobs = {}
+_scan_lock = threading.Lock()
+
+
+def _run_scan_job(job_id, market, limit):
+    try:
+        analyzer = DonmulwonAnalyzer()
+
+        def update_progress(done, total, ticker):
+            with _scan_lock:
+                job = _scan_jobs.get(job_id)
+                if job is not None:
+                    job.update({"progress": done, "total": total, "current_ticker": ticker})
+
+        result = analyzer.scan_market(market, progress=update_progress, limit=limit)
+        with _scan_lock:
+            job = _scan_jobs.get(job_id)
+            if job is not None:
+                if result.ok:
+                    job.update({"status": "completed", "progress": job.get("total", 0),
+                                "result": result.data, "finished_at": datetime.now().isoformat(timespec="seconds")})
+                else:
+                    job.update({"status": "failed", "error": result.message,
+                                "finished_at": datetime.now().isoformat(timespec="seconds")})
+    except Exception as exc:
+        with _scan_lock:
+            job = _scan_jobs.get(job_id)
+            if job is not None:
+                job.update({"status": "failed", "error": str(exc),
+                            "finished_at": datetime.now().isoformat(timespec="seconds")})
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,11 +101,38 @@ def scan_market(
     market: str,
     limit: int | None = Query(default=None, ge=1, le=3000),
 ):
-    """Run the existing three-condition daily scanner for KOSPI or KOSDAQ."""
+    """Start a background scan and return a job ID immediately."""
     selected = _market_name(market)
-    analyzer = DonmulwonAnalyzer()
-    result = analyzer.scan_market(selected, limit=limit)
-    return _require_success(result)
+    with _scan_lock:
+        active = next((job for job in _scan_jobs.values()
+                       if job["market"] == selected and job["status"] == "running"), None)
+        if active:
+            return {"job_id": active["job_id"], "status": "running", "reused": True}
+        job_id = uuid.uuid4().hex
+        _scan_jobs[job_id] = {
+            "job_id": job_id, "market": selected, "status": "running",
+            "progress": 0, "total": 0, "current_ticker": None,
+            "started_at": datetime.now().isoformat(timespec="seconds"),
+        }
+    _scan_executor.submit(_run_scan_job, job_id, selected, limit)
+    return {"job_id": job_id, "status": "running", "reused": False}
+
+
+@app.get("/api/scan/jobs/{job_id}")
+def scan_job_status(job_id: str):
+    """Return background scan progress or its completed result."""
+    with _scan_lock:
+        job = _scan_jobs.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="스캔 작업을 찾을 수 없습니다.")
+        return dict(job)
+
+
+@app.get("/api/history")
+def analysis_history(limit: int = Query(default=30, ge=1, le=100)):
+    """Return recent saved single-stock analysis records."""
+    from .storage import AnalysisStore
+    return {"items": AnalysisStore().recent_analyses(limit)}
 
 
 @app.get("/api/toss/status")
