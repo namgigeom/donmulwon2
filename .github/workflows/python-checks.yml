@@ -40,7 +40,11 @@ jobs:
           app.processEvents()
           screenshot = window.grab()
           assert not screenshot.isNull(), "Dashboard screenshot is empty"
-          assert window.centralWidget().market_panel.isVisible()
+          dashboard = window.centralWidget()
+          assert dashboard.isVisible()
+          assert dashboard.image.width() == 1672
+          assert dashboard.image.height() == 941
+          assert dashboard._to_canvas(10, 10) is not None
           window.close()
-          print("Dashboard construction and paint OK")
+          print("Pixel-art canvas construction and paint OK")
           PY
