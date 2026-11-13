@@ -222,8 +222,8 @@ class Dashboard(QWidget):
         # inside the parchment surfaces; wooden borders, pins and decorations remain.
         self._paper_patch(p, (858, 252, 247, 79), 201)
         self._paper_patch(p, (1130, 252, 245, 79), 202)
-        self._paper_patch(p, (858, 388, 250, 119), 203)
-        self._paper_patch(p, (1135, 388, 243, 119), 204)
+        self._paper_patch(p, (858, 369, 250, 138), 203)
+        self._paper_patch(p, (1135, 369, 243, 138), 204)
         self._paper_patch(p, (866, 584, 444, 69), 205)
 
         kp, kd = self.market_data.get("KOSPI", {}), self.market_data.get("KOSDAQ", {})
@@ -259,7 +259,7 @@ class Dashboard(QWidget):
         keys = ("rsi_cross_and_rising", "macd_cross_and_rising", "ma10_breakout")
         labels = ("RSI(10) / RSI(14) 상향 교차", "MACD 상승 전환", "10일 이동평균선 돌파")
         for i, (key, label) in enumerate(zip(keys, labels)):
-            y = 786 + i*39
+            y = 780 + i*39
             self._dark_patch(p, (48, y-20, 355, 28), 310+i)
             ok = checks.get(key)
             box = QColor("#3eaa65" if ok else "#756b68" if ok is False else "#6a6870")
