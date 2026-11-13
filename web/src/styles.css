@@ -318,6 +318,7 @@ button { color: inherit; }
 .price-svg { height: auto; aspect-ratio: 900 / 240; }
 .volume-svg { height: auto; aspect-ratio: 900 / 76; }
 .indicator-svg { height: auto; aspect-ratio: 900 / 120; }
+.rsi-svg { height: 135px; }
 .technical-grid { stroke: rgba(188,211,194,.14); stroke-width: 1; stroke-dasharray: 3 5; }
 .zero-line { stroke: rgba(202,218,205,.35); stroke-width: 1; }
 .threshold-line { stroke: rgba(218,179,112,.45); stroke-width: 1; stroke-dasharray: 5 5; }
@@ -470,7 +471,7 @@ button { color: inherit; }
 .stock-identity span, .stock-last-price small { color: var(--muted); font-size: 11px; }
 .stock-last-price { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }.stock-last-price b { font: 600 23px var(--mono); }
 .stock-large-chart { min-height: 650px; padding: 18px 14px; border: 1px solid var(--line); border-radius: 8px; background: rgba(9,16,12,.22); }
-.stock-large-chart .price-svg { height: 440px; }.stock-large-chart .volume-svg { height: 120px; }.stock-large-chart .indicator-svg { height: 155px; }
+.stock-large-chart .price-svg { height: 440px; }.stock-large-chart .volume-svg { height: 120px; }.stock-large-chart .indicator-svg { height: 155px; } .stock-large-chart .rsi-svg { height: 180px; }
 .stock-detail-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 14px; margin-top: 16px; }
 .stock-detail-card { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: rgba(8,15,11,.18); }
 .analysis-condition { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 9px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 11px; }.analysis-condition > span { color: #839b84; font: 10px var(--mono); }.analysis-condition strong { font-size: 10px; }
