@@ -56,7 +56,7 @@ type Candle = {
   MACD?: number | null; MACD_SIGNAL?: number | null; MACD_HIST?: number | null;
   RSI10?: number | null; RSI14?: number | null;
 };
-type StockAnalysis = { ticker: string; name: string; trading_date: string; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
+type StockAnalysis = { ticker: string; name: string; trading_date: string; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; latest?:{trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
 type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; error_count:number; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
@@ -398,6 +398,23 @@ function App() {
                   <div className="chart-grid-lines"><i /><i /><i /><i /></div>
                   {stockLoading ? <div className="chart-empty-content"><b>종목 데이터 조회 중…</b></div> : stockError ? <div className="chart-empty-content"><b>{stockError}</b></div> : stockAnalysis ? <PriceChart bars={activeBars} /> : <div className="chart-empty-content"><CandlestickChart size={25} /><b>종목 조회 대기</b><span>예: 삼성전자 005930 · 종목코드 입력 후 조회</span></div>}
                 </div>
+                {stockAnalysis && <div className="stock-plan">
+                  <div className="stock-plan-heading"><b>{stockAnalysis.name} · 매매 기준 점검</b><span>{stockAnalysis.trading_date}</span></div>
+                  <div className="stock-checks">
+                    {[
+                      ["RSI(10/14) 골든크로스", "rsi_cross_and_rising"],
+                      ["MACD(5/10/9) 골든크로스", "macd_cross_and_rising"],
+                      ["종가 MA10 상향 돌파", "ma10_breakout"],
+                    ].map(([label, key]) => <span key={key} className={stockAnalysis.signal?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.signal?.checks?.[key] ? "충족" : "미충족"} · {label}</span>)}
+                  </div>
+                  {stockAnalysis.latest?.trade_plan?.ready ? <div className="stock-plan-grid">
+                    <div><small>진입 참고 구간</small><b>{Math.round(stockAnalysis.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ {Math.round(stockAnalysis.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}</b></div>
+                    <div><small>손절 기준</small><b>{Math.round(stockAnalysis.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")}</b></div>
+                    <div><small>목표 1 · 2R</small><b>{Math.round(stockAnalysis.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}</b></div>
+                    <div><small>목표 2 · 3R</small><b>{Math.round(stockAnalysis.latest.trade_plan.target_2 ?? 0).toLocaleString("ko-KR")}</b></div>
+                  </div> : <div className="scanner-state">변동성 데이터 부족으로 진입·손절·목표 가격을 계산할 수 없습니다.</div>}
+                  <small className="stock-plan-warning">{stockAnalysis.latest?.trade_plan?.warning ?? "ATR 기반 참고값이며 매수 추천이 아닙니다."}</small>
+                </div>}
                 <div className="sector-watch-grid">
                   <section className="sector-watch-card">
                     <div className="sector-watch-title"><span><Flame size={15} /> 오늘의 강세 업종</span><small>TOP SECTORS</small></div>
