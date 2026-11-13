@@ -158,15 +158,15 @@ def _trade_plan(close: float | None, atr: float | None) -> dict:
     entry_low = close - atr * 0.30
     entry_high = close + atr * 0.20
     stop = close - atr * 1.50
-    risk = close - stop
+    risk = entry_high - stop
     return {
         "ready": True,
         "method": "최근 종가와 ATR(14) 기반 참고값",
         "entry_low": round(entry_low, 2),
         "entry_high": round(entry_high, 2),
         "stop_loss": round(stop, 2),
-        "target_1": round(close + risk * 2, 2),
-        "target_2": round(close + risk * 3, 2),
+        "target_1": round(entry_high + risk * 2, 2),
+        "target_2": round(entry_high + risk * 3, 2),
         "risk_per_share": round(risk, 2),
         "reward_risk_1": 2.0,
         "reward_risk_2": 3.0,
