@@ -333,3 +333,12 @@
 - 변경: 저장소 루트에서 PowerShell 런처 한 번으로 Python 가상환경/의존성을 확인하고 FastAPI와 Vite 개발 서버를 별도 터미널에서 실행한 뒤 브라우저를 연다. Node.js/npm 미설치 시 명확한 오류를 표시한다.
 - 문서: 핵심 일봉 필수 조건, 주봉 컨텍스트, 240일선 위험 처리, KRX 전체 스캔/Toss 개별 종목 데이터 역할, ATR 기반 참고 가격의 한계를 문서화했다.
 - 검증: 런처는 사용자 Windows PC에서 실제 실행 확인이 필요하다. GitHub Actions에서 웹 빌드 및 Python 테스트를 확인 중이다.
+
+
+## 17. pykrx '지수명' KeyError 수정
+- 날짜: 2026-11-14
+- 작업: donmulwon2/market_data.py, tests/test_market_data.py
+- 원인: pykrx의 get_index_ohlcv_by_date()는 지수 OHLCV를 받은 뒤 기본 설정(name_display=True)에서 별도의 지수명 매핑 테이블을 조회한다. KRX 응답에서 해당 매핑 테이블을 정상적으로 읽지 못하면 실제 OHLCV 응답과 무관하게 KeyError: '지수명'이 발생한다.
+- 수정: 최근 거래일 확인과 지수 이력 조회에서 name_display=False를 지정해 불필요한 지수명 매핑 단계를 건너뛴다. 지수 OHLCV의 날짜·가격 데이터는 그대로 사용한다.
+- 테스트: 네트워크 없이 두 호출 모두 name_display=False를 전달하는지 확인하는 회귀 테스트 추가.
+- 검증: 코드 반영 완료. GitHub Actions 결과와 사용자 PC에서 KRX 실데이터 재조회는 후속 확인 필요.
