@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
-  Wallet,
 } from "lucide-react";
 
 type NavItem = {
@@ -37,7 +36,6 @@ const mainNav: NavItem[] = [
 
 const marketNav: NavItem[] = [
   { label: "시장 현황", icon: BarChart3 },
-  { label: "내 계좌", icon: Wallet },
 ];
 
 type MarketBulletin = {
@@ -62,6 +60,7 @@ type Candle = {
 type StockAnalysis = { ticker: string; name: string; trading_date: string; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null}; };
 type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; error_count:number; };
+type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
 
 function formatCount(value: number | undefined) {
@@ -165,14 +164,25 @@ function App() {
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanProgress, setScanProgress] = useState<ScanJob | null>(null);
 
   async function runMarketScan() {
-    setScanLoading(true); setScanError(""); setScanResult(null);
+    setScanLoading(true); setScanError(""); setScanResult(null); setScanProgress(null);
     try {
-      const response = await fetch(apiBase + "/api/scan/" + scanMarket + "?limit=3000", { method: "POST" });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.detail || "시장 스캔에 실패했습니다.");
-      setScanResult(payload as ScanResult);
+      const start = await fetch(apiBase + "/api/scan/" + scanMarket + "?limit=3000", { method: "POST" });
+      const started = await start.json();
+      if (!start.ok) throw new Error(started.detail || "시장 스캔을 시작하지 못했습니다.");
+      const jobId = String(started.job_id || "");
+      if (!jobId) throw new Error("서버가 스캔 작업 ID를 반환하지 않았습니다.");
+      while (true) {
+        const response = await fetch(apiBase + "/api/scan/jobs/" + jobId);
+        const job = await response.json() as ScanJob;
+        if (!response.ok) throw new Error((job as unknown as {detail?:string}).detail || "스캔 상태를 확인하지 못했습니다.");
+        setScanProgress(job);
+        if (job.status === "completed" && job.result) { setScanResult(job.result); break; }
+        if (job.status === "failed") throw new Error(job.error || "시장 스캔이 실패했습니다.");
+        await new Promise(resolve => window.setTimeout(resolve, 1200));
+      }
     } catch (error) {
       setScanError(error instanceof Error ? error.message : "시장 스캔에 실패했습니다.");
     } finally { setScanLoading(false); }
@@ -274,7 +284,7 @@ function App() {
             <a className={active ? "nav-link active" : "nav-link"} href={label === "시장 스캐너" ? "#market-scanner" : "#"} key={label}>
               <Icon size={17} strokeWidth={1.8} />
               <span>{label}</span>
-              {label === "시장 스캐너" && <span className="nav-count">3</span>}
+              {label === "시장 스캐너" && <span className="nav-count">SCAN</span>}
             </a>
           ))}
 
@@ -290,7 +300,7 @@ function App() {
         <div className="sidebar-bottom">
           <div className="connection-card">
             <span className="connection-dot" />
-            <span><b>시스템 준비 중</b><small>실제 데이터 연결 전</small></span>
+            <span><b>{apiStatus === "Python API 연결됨" ? "분석 엔진 연결됨" : "시스템 연결 확인 중"}</b><small>{apiStatus}</small></span>
           </div>
           <a className="nav-link muted" href="#"><Settings2 size={17} />설정</a>
           <a className="nav-link muted" href="#"><CircleHelp size={17} />도움말</a>
@@ -464,7 +474,7 @@ function App() {
               <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "선택 시장 스캔 시작"}</button>
               {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 후보 {scanResult.matches.length}개 · 오류 {scanResult.error_count}건</span>}
             </div>
-            {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> 종목별 일봉 데이터를 확인하고 조건을 계산하고 있습니다. 종목 수에 따라 시간이 걸릴 수 있습니다.</div>}
+            {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
             {scanError && <div className="scanner-state error">{scanError}</div>}
             {scanResult && <div className="scanner-table-wrap">
               {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다.</div> :
