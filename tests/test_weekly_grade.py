@@ -7,8 +7,8 @@ from donmulwon2.analyzer import _weekly_summary
 
 
 class WeeklyTrendGradeTests(unittest.TestCase):
-    def _frame(self, current):
-        previous = {
+    def _frame(self, current, previous=None):
+        previous = previous or {
             "MA10": 100.0,
             "MA20": 95.0,
             "RSI10": 55.0,
@@ -34,6 +34,8 @@ class WeeklyTrendGradeTests(unittest.TestCase):
             "종가": 108.0, "MA10": 105.0, "MA20": 100.0,
             "RSI10": 48.0, "RSI14": 52.0,
             "MACD": 1.0, "MACD_SIGNAL": 2.0,
+        }, previous={
+            "MA10": 105.0, "MA20": 100.0, "RSI10": 55.0, "RSI14": 50.0,
         }))
         self.assertEqual(result["grade"], "B")
         self.assertEqual(result["grade_score"], 55)
