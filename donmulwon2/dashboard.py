@@ -43,10 +43,11 @@ class Panel(QFrame):
         super().__init__(parent)
         self.setObjectName("panel")
         self.setStyleSheet("""
+            /* The artwork is the interface: panels must never look like floating windows. */
             QFrame#panel {
-                background-color: rgba(20, 29, 27, 226);
-                border: 1px solid rgba(196, 164, 111, 190);
-                border-radius: 8px;
+                background: transparent;
+                border: none;
+                border-radius: 0;
             }
             QLabel { color: #eee7d8; background: transparent; }
             QLabel#panelTitle { color: #d9b77d; font-size: 13px; font-weight: 700; }
@@ -76,13 +77,13 @@ class Panel(QFrame):
             }
             QTabBar::tab:selected { color: #f3d9a7; background: #405246; }
             QTableWidget {
-                color: #eee7d8; background: rgba(12, 19, 17, 220);
-                gridline-color: #435149; border: 0;
-                selection-background-color: #526b55;
+                color: #f3ead8; background: rgba(12, 19, 17, 72);
+                gridline-color: rgba(160, 174, 158, 70); border: 0;
+                selection-background-color: rgba(82, 107, 85, 150);
             }
             QHeaderView::section {
-                color: #d9b77d; background: #26332d; border: 0;
-                padding: 5px; font-weight: 700;
+                color: #e5c98f; background: rgba(38, 51, 45, 105); border: 0;
+                padding: 4px; font-weight: 700;
             }
             QProgressBar {
                 color: #eee7d8; background: #17211e; border: 1px solid #6d765f;
@@ -381,9 +382,9 @@ class Dashboard(QWidget):
         self.detail_panel.content_layout.addWidget(self.report_text)
 
         self.footer_status = QLabel("● KRX DATA NOT CONNECTED")
-        self.footer_status.setStyleSheet("color:#d9b77d;background:rgba(16,23,21,220);padding:8px;")
+        self.footer_status.setStyleSheet("color:#e6c88f;background:transparent;padding:2px;")
         self.footer_clock = QLabel("")
-        self.footer_clock.setStyleSheet("color:#eee4d1;background:rgba(16,23,21,220);padding:8px;")
+        self.footer_clock.setStyleSheet("color:#eee4d1;background:transparent;padding:2px;")
 
         self.market_panel.setParent(self)
         self.scan_panel.setParent(self)
