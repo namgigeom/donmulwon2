@@ -63,6 +63,29 @@ function formatTradingValue(value: number | undefined) {
     : "—";
 }
 
+function PriceChart({ bars }: { bars: Candle[] }) {
+  const rows = bars.filter((b) => [b['시가'], b['고가'], b['저가'], b['종가']].every((v) => typeof v === 'number' && Number.isFinite(v)));
+  if (!rows.length) return <div className='chart-empty-content'><b>선택한 주기의 차트 데이터가 없습니다.</b></div>;
+  const width = 720, height = 250, pad = 18;
+  const max = Math.max(...rows.map((b) => b['고가'] as number));
+  const min = Math.min(...rows.map((b) => b['저가'] as number));
+  const range = max - min || 1, plot = height - pad * 2, step = (width - pad * 2) / rows.length;
+  const candleWidth = Math.max(2, Math.min(9, step * 0.62));
+  const y = (v: number) => pad + ((max - v) / range) * plot;
+  return <div className='price-chart-wrap'>
+    <div className='chart-price-labels'><span>고가 {max.toLocaleString('ko-KR')}</span><span>저가 {min.toLocaleString('ko-KR')}</span></div>
+    <svg className='price-chart' viewBox='0 0 720 250' role='img' aria-label='캔들 차트'>
+      {[0, 1, 2, 3].map((n) => <line key={n} x1={pad} x2={width-pad} y1={pad+plot*n/3} y2={pad+plot*n/3} className='price-chart-grid' />)}
+      {rows.map((bar, index) => {
+        const open = bar['시가'] as number, high = bar['고가'] as number, low = bar['저가'] as number, close = bar['종가'] as number;
+        const x = pad + step * index + step / 2, up = close >= open;
+        const top = Math.min(y(open), y(close)), body = Math.max(2, Math.abs(y(open)-y(close)));
+        return <g key={bar.date}><line x1={x} x2={x} y1={y(high)} y2={y(low)} className={up ? 'candle-wick up' : 'candle-wick down'} /><rect x={x-candleWidth/2} y={top} width={candleWidth} height={body} className={up ? 'candle-body up' : 'candle-body down'} /></g>;
+      })}
+    </svg>
+    <div className='chart-date-labels'><span>{rows[0].date}</span><span>{rows[rows.length-1].date}</span></div>
+  </div>;
+}
 function App() {
   const [chartPeriod, setChartPeriod] = useState<"daily" | "weekly">("daily");
   const [tickerInput, setTickerInput] = useState("");
@@ -277,7 +300,7 @@ function App() {
                 </div>
                 <div className="chart-empty">
                   <div className="chart-grid-lines"><i /><i /><i /><i /></div>
-                  <div className="chart-empty-content"><CandlestickChart size={25} /><b>분석 종목 선택 대기</b><span>{chartPeriod === "weekly" ? "주봉으로 큰 추세를 확인합니다." : "일봉으로 스윙 후보와 진입 흐름을 확인합니다."}</span></div>
+                  {stockLoading ? <div className="chart-empty-content"><b>종목 데이터 조회 중…</b></div> : stockError ? <div className="chart-empty-content"><b>{stockError}</b></div> : stockAnalysis ? <PriceChart bars={activeBars} /> : <div className="chart-empty-content"><CandlestickChart size={25} /><b>종목 조회 대기</b><span>예: 삼성전자 005930 · 종목코드 입력 후 조회</span></div>}
                 </div>
                 <div className="sector-watch-grid">
                   <section className="sector-watch-card">
