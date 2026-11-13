@@ -1,11 +1,8 @@
-"""Split the two Gemini sprite sheets into usable PNG assets.
+"""Extract one clean, static Neoburi character with transparent background.
 
-Run from the repository root:
-    python tools/extract_art_sheets.py
-
-The source sheets stay untouched. The sprite sheet is a 4x5 grid (20 poses);
-the office environment sheet is a 3x3 grid (9 scenes). Sprite backgrounds are
-removed with edge-connected flood fill so enclosed dark details are preserved.
+The source is a 4x5 pose sheet. Pose 16 (row 4, column 4) is selected because
+it contains only the seated raccoon: no desk, monitor, chair, or office props.
+Run from the repository root with: python tools/extract_art_sheets.py
 """
 from __future__ import annotations
 
@@ -16,37 +13,22 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = ROOT / "assets"
-SPRITE_SHEET = ASSETS / "Gemini_Generated_Image_f889qsf889qsf889.jpg"
-SCENE_SHEET = ASSETS / "Gemini_Generated_Image_f889qsf889qsf889 (1).jpg"
-
-SPRITE_COLS, SPRITE_ROWS = 4, 5
-SCENE_COLS, SCENE_ROWS = 3, 3
-# RGB distance threshold from the sampled sheet background. Only pixels
-# connected to a cell edge are removed; dark suit/outline pixels stay intact.
+SOURCE = ROOT / "assets" / "Gemini_Generated_Image_f889qsf889qsf889.jpg"
+OUTPUT = ROOT / "assets" / "characters" / "neoburi" / "neoburi.png"
+POSE_COLUMNS = 4
+POSE_ROWS = 5
+POSE_NUMBER = 16
 BACKGROUND_TOLERANCE = 25
-
-
-def cell_bounds(size: tuple[int, int], cols: int, rows: int, col: int, row: int):
-    width, height = size
-    left = round(col * width / cols)
-    top = round(row * height / rows)
-    right = round((col + 1) * width / cols)
-    bottom = round((row + 1) * height / rows)
-    return left, top, right, bottom
-
-
-def color_distance(a, b) -> int:
-    return max(abs(a[0] - b[0]), abs(a[1] - b[1]), abs(a[2] - b[2]))
 
 
 def remove_edge_background(image: Image.Image) -> Image.Image:
     rgba = image.convert("RGBA")
-    px = rgba.load()
+    pixels = rgba.load()
     width, height = rgba.size
-    corners = [px[0, 0], px[width - 1, 0], px[0, height - 1], px[width - 1, height - 1]]
-    bg = tuple(sorted(c[i] for c in corners)[len(corners) // 2] for i in range(3))
-
+    corners = [pixels[0, 0], pixels[width - 1, 0],
+               pixels[0, height - 1], pixels[width - 1, height - 1]]
+    background = tuple(sorted(c[i] for c in corners)[len(corners) // 2]
+                       for i in range(3))
     visited = bytearray(width * height)
     queue = deque()
 
@@ -55,7 +37,8 @@ def remove_edge_background(image: Image.Image) -> Image.Image:
         if visited[index]:
             return
         visited[index] = 1
-        if color_distance(px[x, y], bg) <= BACKGROUND_TOLERANCE:
+        color = pixels[x, y]
+        if max(abs(color[i] - background[i]) for i in range(3)) <= BACKGROUND_TOLERANCE:
             queue.append((x, y))
 
     for x in range(width):
@@ -67,78 +50,60 @@ def remove_edge_background(image: Image.Image) -> Image.Image:
 
     while queue:
         x, y = queue.popleft()
-        r, g, b, _ = px[x, y]
-        px[x, y] = (r, g, b, 0)
-        if x: add(x - 1, y)
+        r, g, b, _ = pixels[x, y]
+        pixels[x, y] = (r, g, b, 0)
+        if x > 0: add(x - 1, y)
         if x + 1 < width: add(x + 1, y)
-        if y: add(x, y - 1)
+        if y > 0: add(x, y - 1)
         if y + 1 < height: add(x, y + 1)
-
     return rgba
 
 
 def main() -> None:
-    if not SPRITE_SHEET.is_file() or not SCENE_SHEET.is_file():
-        missing = [str(p) for p in (SPRITE_SHEET, SCENE_SHEET) if not p.is_file()]
-        raise FileNotFoundError("Missing source sheet(s): " + ", ".join(missing))
+    if not SOURCE.is_file():
+        raise FileNotFoundError(f"Character source sheet not found: {SOURCE}")
 
-    sprite_source = Image.open(SPRITE_SHEET).convert("RGB")
-    scene_source = Image.open(SCENE_SHEET).convert("RGB")
+    with Image.open(SOURCE) as source:
+        source = source.convert("RGB")
+        index = POSE_NUMBER - 1
+        row, column = divmod(index, POSE_COLUMNS)
+        left = round(column * source.width / POSE_COLUMNS)
+        top = round(row * source.height / POSE_ROWS)
+        right = round((column + 1) * source.width / POSE_COLUMNS)
+        bottom = round((row + 1) * source.height / POSE_ROWS)
+        character = remove_edge_background(source.crop((left, top, right, bottom)))
 
-    sprite_dir = ASSETS / "characters" / "neoburi" / "frames"
-    scene_dir = ASSETS / "backgrounds" / "scenes"
-    sprite_dir.mkdir(parents=True, exist_ok=True)
-    scene_dir.mkdir(parents=True, exist_ok=True)
+    alpha = character.getchannel("A")
+    bounds = alpha.getbbox()
+    if bounds is None:
+        raise RuntimeError("Background removal produced an empty character image")
 
-    sprite_manifest = []
-    for row in range(SPRITE_ROWS):
-        for col in range(SPRITE_COLS):
-            number = row * SPRITE_COLS + col + 1
-            crop = sprite_source.crop(cell_bounds(sprite_source.size, SPRITE_COLS, SPRITE_ROWS, col, row))
-            frame = remove_edge_background(crop)
-            # Pad uneven integer grid cells to one shared canvas so every pose
-            # has the same dimensions and can be swapped without layout jumps.
-            frame_canvas = Image.new("RGBA", (
-                (sprite_source.width + SPRITE_COLS - 1) // SPRITE_COLS,
-                (sprite_source.height + SPRITE_ROWS - 1) // SPRITE_ROWS,
-            ), (0, 0, 0, 0))
-            frame_canvas.alpha_composite(frame, (0, 0))
-            frame = frame_canvas
-            name = f"pose_{number:02d}.png"
-            frame.save(sprite_dir / name, optimize=True)
-            sprite_manifest.append({
-                "file": name, "row": row, "column": col,
-                "canvas_width": frame.width, "canvas_height": frame.height,
-                "note": "Cell crop; inspect alignment before animation."
-            })
+    # Trim all transparent margins and retain a tiny transparent breathing room.
+    character = character.crop(bounds)
+    margin = 4
+    trimmed = Image.new("RGBA", (character.width + margin * 2,
+                                  character.height + margin * 2), (0, 0, 0, 0))
+    trimmed.alpha_composite(character, (margin, margin))
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    trimmed.save(OUTPUT, optimize=True)
 
-    scene_manifest = []
-    for row in range(SCENE_ROWS):
-        for col in range(SCENE_COLS):
-            number = row * SCENE_COLS + col + 1
-            crop = scene_source.crop(cell_bounds(scene_source.size, SCENE_COLS, SCENE_ROWS, col, row))
-            scene_canvas = Image.new("RGB", (
-                (scene_source.width + SCENE_COLS - 1) // SCENE_COLS,
-                (scene_source.height + SCENE_ROWS - 1) // SCENE_ROWS,
-            ), (0, 0, 0))
-            scene_canvas.paste(crop, (0, 0))
-            crop = scene_canvas
-            name = f"scene_{number:02d}.png"
-            crop.save(scene_dir / name, optimize=True)
-            scene_manifest.append({
-                "file": name, "row": row, "column": col,
-                "width": crop.width, "height": crop.height
-            })
-
-    (sprite_dir / "manifest.json").write_text(
-        json.dumps(sprite_manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    manifest = {
+        "file": OUTPUT.name,
+        "source_pose": POSE_NUMBER,
+        "source_row": row + 1,
+        "source_column": column + 1,
+        "background": "transparent",
+        "contains_furniture": False,
+        "animated": False,
+        "width": trimmed.width,
+        "height": trimmed.height,
+    }
+    (OUTPUT.parent / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    (scene_dir / "manifest.json").write_text(
-        json.dumps(scene_manifest, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    print(f"Extracted {len(sprite_manifest)} character cells to {sprite_dir}")
-    print(f"Extracted {len(scene_manifest)} environment cells to {scene_dir}")
-    print("Source sheets were not modified. Review frame alignment and transparency before wiring animation.")
+    print(f"Extracted one static transparent Neoburi character: {OUTPUT}")
+    print(f"Image size: {trimmed.width}x{trimmed.height}; source pose: {POSE_NUMBER}")
+    print("No office background, desk, monitor, or animation frames are used.")
 
 
 if __name__ == "__main__":
