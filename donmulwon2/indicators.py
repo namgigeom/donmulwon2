@@ -59,6 +59,30 @@ def calculate_indicators(frame: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+
+def resample_weekly_ohlcv(frame: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate daily KRX OHLCV into completed Friday-ending weekly candles."""
+    if frame is None or frame.empty:
+        return pd.DataFrame()
+    df = frame.copy().sort_index()
+    aggregation = {}
+    for column, method in (
+        ("시가", "first"), ("고가", "max"), ("저가", "min"),
+        ("종가", "last"), ("거래량", "sum"), ("거래대금", "sum"),
+    ):
+        if column in df.columns:
+            aggregation[column] = method
+    if "종가" not in aggregation:
+        return pd.DataFrame()
+    weekly = df.resample("W-FRI").agg(aggregation).dropna(subset=["종가"])
+    # A Friday-labelled candle is not complete if the latest daily bar is earlier
+    # in that same week. Conservatively omit it rather than use partial-week data.
+    weekly = weekly.loc[weekly.index <= df.index.max()]
+    if not weekly.empty and weekly.index[-1].date() > df.index.max().date():
+        weekly = weekly.iloc[:-1]
+    return weekly
+
+
 def latest_signal(frame: pd.DataFrame) -> dict:
     """Evaluate the user's three mandatory entry conditions on the latest completed bar."""
     if frame is None or len(frame) < 2:
