@@ -18,7 +18,8 @@ class DonmulwonAnalyzer:
         self.store = store or AnalysisStore()
 
     def analyze_ticker(
-        self, ticker: str, *, save: bool = True, include_ohlcv: bool = True
+        self, ticker: str, *, name: str | None = None,
+        save: bool = True, include_ohlcv: bool = True
     ) -> DataResult:
         history = self.provider.ticker_history(ticker, days=420)
         if not history.ok:
@@ -28,7 +29,7 @@ class DonmulwonAnalyzer:
             return DataResult(False, message="지표 계산 결과가 비어 있습니다.")
         signal = latest_signal(history.data)
         date = frame.index[-1].strftime("%Y%m%d")
-        name = self.provider.ticker_name(ticker)
+        name = name or self.provider.ticker_name(ticker)
         last = frame.iloc[-1]
         previous = frame.iloc[-2] if len(frame) > 1 else last
         close = _number(last.get("종가"))
@@ -107,12 +108,18 @@ class DonmulwonAnalyzer:
         try:
             date = self.provider.latest_trading_date()
             tickers = stock.get_market_ticker_list(date, market=market)
+            try:
+                names = stock.get_market_ticker_and_name(date, market=market).to_dict()
+            except Exception:
+                names = {}
             if limit is not None:
                 tickers = tickers[:limit]
             matches, errors = [], []
             total = len(tickers)
             for index, ticker in enumerate(tickers, start=1):
-                result = self.analyze_ticker(ticker, save=False, include_ohlcv=False)
+                result = self.analyze_ticker(
+                    ticker, name=names.get(ticker), save=False, include_ohlcv=False
+                )
                 if result.ok and result.data["matched"]:
                     matches.append(result.data)
                 elif not result.ok:
