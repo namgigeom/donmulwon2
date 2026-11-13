@@ -10,7 +10,7 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
     QMainWindow, QMessageBox, QPushButton, QProgressBar, QTableWidget, QComboBox,
-    QTableWidgetItem, QVBoxLayout, QWidget, QHeaderView
+    QTableWidgetItem, QVBoxLayout, QWidget, QHeaderView, QTabWidget
 )
 
 from .workers import AnalysisWorker
@@ -270,20 +270,41 @@ class Dashboard(QWidget):
         self.scan_hint = QLabel("세 가지 필수 조건을 모두 충족한 종목만 후보로 표시합니다.")
         self.scan_hint.setObjectName("muted")
         self.scan_panel.content_layout.addWidget(self.scan_hint)
+        self.scan_tabs = QTabWidget()
+        results_page = QWidget()
+        results_layout = QVBoxLayout(results_page)
+        results_layout.setContentsMargins(3, 5, 3, 3)
         self.scan_table = QTableWidget(0, 5)
         self.scan_table.setHorizontalHeaderLabels(["종목", "종가", "RSI10", "MACD", "조건"])
         self.scan_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.scan_table.verticalHeader().setVisible(False)
         self.scan_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.scan_table.cellClicked.connect(self._select_scan_row)
-        self.scan_panel.content_layout.addWidget(self.scan_table, 1)
+        results_layout.addWidget(self.scan_table, 1)
         self.scan_progress = QProgressBar()
         self.scan_progress.setRange(0, 100)
         self.scan_progress.setValue(0)
-        self.scan_panel.content_layout.addWidget(self.scan_progress)
+        results_layout.addWidget(self.scan_progress)
         self.scan_status = QLabel("검색 대기")
         self.scan_status.setObjectName("muted")
-        self.scan_panel.content_layout.addWidget(self.scan_status)
+        results_layout.addWidget(self.scan_status)
+        history_page = QWidget()
+        history_layout = QVBoxLayout(history_page)
+        history_layout.setContentsMargins(3, 5, 3, 3)
+        self.history_table = QTableWidget(0, 5)
+        self.history_table.setHorizontalHeaderLabels(["분석 시각", "종목명", "코드", "거래일", "신호"])
+        self.history_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.history_table.verticalHeader().setVisible(False)
+        self.history_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.history_table.cellClicked.connect(self._select_history_row)
+        history_layout.addWidget(self.history_table, 1)
+        history_button = QPushButton("분석 기록 새로고침")
+        history_button.clicked.connect(self._load_history)
+        history_layout.addWidget(history_button)
+        self.scan_tabs.addTab(results_page, "종목 발굴")
+        self.scan_tabs.addTab(history_page, "분석 기록")
+        self.scan_tabs.currentChanged.connect(self._scan_tab_changed)
+        self.scan_panel.content_layout.addWidget(self.scan_tabs, 1)
 
         self.detail_panel = Panel("ANALYST DESK  /  STOCK REPORT")
         controls = QHBoxLayout()
@@ -427,6 +448,8 @@ class Dashboard(QWidget):
             self._show_analysis(data)
         elif "matches" in data:
             self._show_scan(data)
+        elif isinstance(data, list):
+            self._show_history(data)
 
     def _on_worker_failed(self, message):
         self.footer_status.setText("● DATA ERROR")
@@ -523,6 +546,36 @@ class Dashboard(QWidget):
             self.scan_hint.setText("현재 거래일 기준 세 가지 조건을 모두 만족한 종목이 없습니다.")
         else:
             self.scan_hint.setText("행을 선택하면 해당 종목의 상세 분석을 불러옵니다.")
+
+    def _scan_tab_changed(self, index):
+        if index == 1:
+            self._load_history()
+
+    def _load_history(self):
+        self._run_worker("history")
+
+    def _show_history(self, records):
+        self.history_table.setRowCount(len(records))
+        for row, record in enumerate(records):
+            values = [
+                record.get("analyzed_at", ""),
+                record.get("name", ""),
+                record.get("ticker", ""),
+                record.get("trading_date", ""),
+                "조건 충족" if record.get("matched") else "미충족",
+            ]
+            for col, value in enumerate(values):
+                cell = QTableWidgetItem(str(value))
+                cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.history_table.setItem(row, col, cell)
+        if not records:
+            self.scan_hint.setText("저장된 분석 기록이 없습니다. 종목을 먼저 분석해 주세요.")
+
+    def _select_history_row(self, row, column):
+        item = self.history_table.item(row, 2)
+        if item:
+            self.ticker_input.setText(item.text())
+            self._analyze_ticker()
 
     def _select_scan_row(self, row, column):
         item = self.scan_table.item(row, 0)
