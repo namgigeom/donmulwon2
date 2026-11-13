@@ -61,7 +61,8 @@ type Candle = {
   MACD?: number | null; MACD_SIGNAL?: number | null; MACD_HIST?: number | null;
   RSI10?: number | null; RSI14?: number | null;
 };
-type StockAnalysis = { ticker: string; name: string; trading_date: string; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{grade?:string;grade_score?:number;grade_reason?:string;trend?:string}; latest?:{close?:number;change_pct?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
+type CompanyProfile = { available:boolean; source?:string; symbol?:string; currency?:string; sector?:string; industry?:string; country?:string; website?:string; employees?:number|null; market_cap?:number|null; summary?:string; annual?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null;revenue_growth_pct?:number|null}|null; quarterly?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null}|null; outlook?:{rating?:string|null;target_mean_price?:number|null;target_upside_pct?:number|null;analyst_count?:number|null}|null; message?:string };
+type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{grade?:string;grade_score?:number;grade_reason?:string;trend?:string}; latest?:{close?:number;change_pct?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
 type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
@@ -75,6 +76,16 @@ function formatTradingValue(value: number | undefined) {
   return typeof value === "number"
     ? `${(value / 100000000).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}억`
     : "—";
+}
+
+function formatCompanyMoney(value: number | null | undefined, currency?: string) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "자료 없음";
+  if (currency === "KRW") {
+    return Math.abs(value) >= 1000000000000
+      ? (value / 1000000000000).toFixed(2) + "조원"
+      : (value / 100000000).toFixed(1) + "억원";
+  }
+  return new Intl.NumberFormat("ko-KR", { style: "currency", currency: currency || "USD", notation: "compact", maximumFractionDigits: 2 }).format(value);
 }
 
 function buildMarketNarrative(kospi?: MarketBulletin, kosdaq?: MarketBulletin) {
@@ -125,7 +136,7 @@ function PriceChart({ bars }: { bars: Candle[] }) {
   const step = plotWidth / rows.length;
   const candleWidth = Math.max(2, Math.min(10, step * 0.62));
   const numeric = (v: number | null | undefined) => typeof v === "number" && Number.isFinite(v) ? v : null;
-  const priceValues = rows.flatMap((b) => [numeric(b["고가"]), numeric(b["저가"]), numeric(b.BB_UPPER), numeric(b.BB_LOWER), numeric(b.MA10), numeric(b.MA20), numeric(b.MA60)]).filter((v): v is number => v !== null);
+  const priceValues = rows.flatMap((b) => [numeric(b["고가"]), numeric(b["저가"]), numeric(b.BB_UPPER), numeric(b.BB_LOWER), numeric(b.MA10), numeric(b.MA20)]).filter((v): v is number => v !== null);
   const minPrice = Math.min(...priceValues), maxPrice = Math.max(...priceValues);
   const pricePad = (maxPrice - minPrice || 1) * 0.08;
   const pMin = minPrice - pricePad, pMax = maxPrice + pricePad;
@@ -151,7 +162,7 @@ function PriceChart({ bars }: { bars: Candle[] }) {
   return <div className="technical-chart">
     <div className="chart-legend">
       <span><i className="legend-candle-up" /> 상승</span><span><i className="legend-candle-down" /> 하락</span>
-      <span className="legend-ma10">MA10</span><span className="legend-ma20">MA20</span><span className="legend-ma60">MA60</span><span className="legend-bb">볼린저밴드(20,2)</span>
+      <span className="legend-ma10">MA10</span><span className="legend-ma20">MA20</span><span className="legend-bb">볼린저밴드(20,2)</span>
     </div>
     <div className="chart-panel-title"><b>가격 · OHLC</b><span>{rows.length}개 봉</span></div>
     <svg className="technical-svg price-svg" viewBox={`0 0 ${width} 240`} role="img" aria-label="이동평균선과 볼린저밴드가 표시된 캔들 차트">
@@ -159,7 +170,7 @@ function PriceChart({ bars }: { bars: Candle[] }) {
       <path d={linePath("BB_UPPER",priceY)} className="indicator-line bb-line"/>
       <path d={linePath("BB_MIDDLE",priceY)} className="indicator-line bb-mid-line"/>
       <path d={linePath("BB_LOWER",priceY)} className="indicator-line bb-line"/>
-      <path d={linePath("MA60",priceY)} className="indicator-line ma60-line"/>
+
       <path d={linePath("MA20",priceY)} className="indicator-line ma20-line"/>
       <path d={linePath("MA10",priceY)} className="indicator-line ma10-line"/>
       {rows.map((bar,i) => {
@@ -656,6 +667,43 @@ function App() {
                 <div className="stock-identity"><div><h2>{stockAnalysis.name} <small>{stockAnalysis.ticker}</small></h2><span>기준일 {stockAnalysis.trading_date} · {stockAnalysis.weekly?.trend ?? "주봉 추세 확인 중"}</span></div>
                   <div className="stock-last-price"><b>{stockAnalysis.latest?.close?.toLocaleString("ko-KR") ?? "—"}원</b><small>전일 대비 {typeof stockAnalysis.latest?.change_pct === "number" ? (stockAnalysis.latest.change_pct > 0 ? "+" : "") + stockAnalysis.latest.change_pct.toFixed(2) + "%" : "—"}</small></div></div>
                 <div className="stock-large-chart"><PriceChart bars={activeBars}/></div>
+                <section className="company-profile-card">
+                  <div className="section-heading compact"><div><span className="section-kicker">COMPANY & FUNDAMENTALS</span><h2>기업 개요 · 실적 · 전망</h2></div><span className="company-source">{stockAnalysis.company?.source ?? "기업 데이터"}</span></div>
+                  {stockAnalysis.company?.available ? <>
+                    <div className="company-summary">{stockAnalysis.company.summary || "회사 사업 소개 데이터가 제공되지 않습니다."}</div>
+                    <div className="company-facts">
+                      <div><small>업종</small><b>{stockAnalysis.company.sector || "—"}</b></div>
+                      <div><small>세부 산업</small><b>{stockAnalysis.company.industry || "—"}</b></div>
+                      <div><small>시가총액</small><b>{formatCompanyMoney(stockAnalysis.company.market_cap, stockAnalysis.company.currency)}</b></div>
+                      <div><small>직원 수</small><b>{stockAnalysis.company.employees ? stockAnalysis.company.employees.toLocaleString("ko-KR") + "명" : "—"}</b></div>
+                    </div>
+                    <div className="company-financials">
+                      <div className="company-subheading"><b>최근 연간 실적</b><span>{stockAnalysis.company.annual?.period ?? "데이터 없음"}</span></div>
+                      <div className="company-financial-grid">
+                        <div><small>매출액</small><b>{formatCompanyMoney(stockAnalysis.company.annual?.revenue, stockAnalysis.company.currency)}</b></div>
+                        <div><small>영업이익</small><b>{formatCompanyMoney(stockAnalysis.company.annual?.operating_income, stockAnalysis.company.currency)}</b></div>
+                        <div><small>순이익</small><b>{formatCompanyMoney(stockAnalysis.company.annual?.net_income, stockAnalysis.company.currency)}</b></div>
+                        <div><small>매출 성장률</small><b>{typeof stockAnalysis.company.annual?.revenue_growth_pct === "number" ? (stockAnalysis.company.annual.revenue_growth_pct > 0 ? "+" : "") + stockAnalysis.company.annual.revenue_growth_pct.toFixed(1) + "%" : "—"}</b></div>
+                      </div>
+                      <div className="company-subheading"><b>최근 분기 실적</b><span>{stockAnalysis.company.quarterly?.period ?? "데이터 없음"}</span></div>
+                      <div className="company-financial-grid">
+                        <div><small>매출액</small><b>{formatCompanyMoney(stockAnalysis.company.quarterly?.revenue, stockAnalysis.company.currency)}</b></div>
+                        <div><small>영업이익</small><b>{formatCompanyMoney(stockAnalysis.company.quarterly?.operating_income, stockAnalysis.company.currency)}</b></div>
+                        <div><small>순이익</small><b>{formatCompanyMoney(stockAnalysis.company.quarterly?.net_income, stockAnalysis.company.currency)}</b></div>
+                      </div>
+                    </div>
+                    <div className="company-outlook">
+                      <div className="company-subheading"><b>애널리스트 전망</b><span>Yahoo Finance 컨센서스</span></div>
+                      <div className="company-financial-grid">
+                        <div><small>투자의견</small><b>{stockAnalysis.company.outlook?.rating || "의견 미수신"}</b></div>
+                        <div><small>평균 목표주가</small><b>{formatCompanyMoney(stockAnalysis.company.outlook?.target_mean_price, stockAnalysis.company.currency)}</b></div>
+                        <div><small>현재가 대비 목표 상승여력</small><b>{typeof stockAnalysis.company.outlook?.target_upside_pct === "number" ? (stockAnalysis.company.outlook.target_upside_pct > 0 ? "+" : "") + stockAnalysis.company.outlook.target_upside_pct.toFixed(1) + "%" : "—"}</b></div>
+                        <div><small>의견 제시 애널리스트</small><b>{stockAnalysis.company.outlook?.analyst_count ? stockAnalysis.company.outlook.analyst_count + "명" : "—"}</b></div>
+                      </div>
+                    </div>
+                    <div className="company-disclaimer">사업 개요·재무제표·애널리스트 컨센서스는 Yahoo Finance 제공 자료입니다. 애널리스트 목표가는 전망치일 뿐 실제 주가나 실적을 보장하지 않습니다. 자료가 없는 항목은 비워 둡니다.{stockAnalysis.company.website ? <> · <a href={stockAnalysis.company.website} target="_blank" rel="noreferrer">회사 홈페이지</a></> : null}</div>
+                  </> : <div className="scanner-state">{stockAnalysis.company?.message || "기업 재무·사업 정보를 제공받지 못했습니다. 시세·기술적 분석은 정상적으로 표시됩니다."}</div>}
+                </section>
                 <div className="stock-detail-grid">
                   <section className="stock-detail-card"><div className="section-heading compact"><div><span className="section-kicker">ENTRY CONDITIONS</span><h2>종목 발굴조건</h2></div><ShieldCheck size={18}/></div>
                     {[
