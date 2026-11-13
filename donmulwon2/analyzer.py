@@ -54,7 +54,7 @@ class DonmulwonAnalyzer:
             "signal": signal,
             "matched": bool(signal.get("matched")),
             "weekly": weekly_summary,
-            "weekly_ohlcv": _frame_records(weekly_indicators.tail(52)),
+            "weekly_ohlcv": _frame_records(weekly_indicators.tail(26)),
             "latest": {
                 "close": _int(last.get("종가")),
                 "change_pct": change_pct,
@@ -87,7 +87,7 @@ class DonmulwonAnalyzer:
             },
         }
         if include_ohlcv:
-            result["ohlcv"] = _frame_records(frame.tail(260))
+            result["ohlcv"] = _frame_records(frame.tail(130))
         if save:
             self.store.save_analysis(ticker, name, date, result)
         return DataResult(True, result, "분석 완료")
