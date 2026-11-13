@@ -19,6 +19,70 @@ class DataResult:
     message: str = ""
 
 
+def _statement_metric(frame: pd.DataFrame | None, aliases: tuple[str, ...]) -> float | None:
+    if frame is None or frame.empty:
+        return None
+    for alias in aliases:
+        if alias in frame.index:
+            try:
+                value = pd.to_numeric(frame.loc[alias].iloc[0], errors="coerce")
+                return float(value) if pd.notna(value) else None
+            except (TypeError, ValueError, IndexError):
+                continue
+    return None
+
+
+def _company_profile_from_data(symbol: str, info: dict, annual: pd.DataFrame | None,
+                               quarterly: pd.DataFrame | None, current_price: float | None) -> dict:
+    def period(frame):
+        if frame is None or frame.empty or len(frame.columns) == 0:
+            return None
+        col = frame.columns[0]
+        return str(col.date() if hasattr(col, "date") else col)[:10]
+
+    def metrics(frame):
+        return {
+            "period": period(frame),
+            "revenue": _statement_metric(frame, ("Total Revenue", "Operating Revenue", "Revenue")),
+            "operating_income": _statement_metric(frame, ("Operating Income", "Operating Income Loss")),
+            "net_income": _statement_metric(frame, ("Net Income", "Net Income Common Stockholders", "Net Income Continuous Operations")),
+        }
+
+    annual_latest = metrics(annual)
+    annual_previous = metrics(annual.iloc[:, 1:]) if annual is not None and len(annual.columns) > 1 else None
+    revenue_growth = None
+    if annual_latest and annual_previous:
+        current_revenue, previous_revenue = annual_latest["revenue"], annual_previous["revenue"]
+        if current_revenue is not None and previous_revenue not in (None, 0):
+            revenue_growth = round((current_revenue / previous_revenue - 1) * 100, 2)
+    target = info.get("targetMeanPrice")
+    target = float(target) if isinstance(target, (int, float)) else None
+    analyst_count = info.get("numberOfAnalystOpinions")
+    analyst_count = int(analyst_count) if isinstance(analyst_count, (int, float)) else None
+    return {
+        "available": bool(info.get("longBusinessSummary") or info.get("sector") or annual_latest),
+        "source": "Yahoo Finance",
+        "symbol": symbol,
+        "currency": info.get("currency") or "KRW",
+        "sector": info.get("sector"),
+        "industry": info.get("industry"),
+        "country": info.get("country"),
+        "website": info.get("website"),
+        "employees": info.get("fullTimeEmployees"),
+        "market_cap": info.get("marketCap"),
+        "summary": info.get("longBusinessSummary"),
+        "annual": ({**annual_latest, "revenue_growth_pct": revenue_growth} if annual_latest else None),
+        "quarterly": metrics(quarterly) if quarterly is not None and not quarterly.empty else None,
+        "outlook": {
+            "rating": info.get("recommendationKey"),
+            "target_mean_price": target,
+            "target_upside_pct": round((target / current_price - 1) * 100, 2)
+                if target is not None and current_price not in (None, 0) else None,
+            "analyst_count": analyst_count,
+        },
+    }
+
+
 class KrxDataProvider:
     def __init__(self):
         self.last_error = ""
@@ -193,6 +257,36 @@ class KrxDataProvider:
             return DataResult(True, frame, "KRX(pykrx) 일봉 데이터 - Toss 미설정")
         except Exception as exc:
             return DataResult(False, message=f"{ticker} 데이터 수집 실패: {exc}")
+
+    def company_profile(self, ticker: str, current_price: float | None = None) -> DataResult:
+        """Fetch optional company description, reported statements and analyst consensus from Yahoo Finance."""
+        try:
+            import yfinance as yf
+            last_error = ""
+            for suffix in (".KS", ".KQ"):
+                symbol = ticker + suffix
+                try:
+                    item = yf.Ticker(symbol)
+                    info = item.info or {}
+                    try:
+                        annual = item.financials
+                    except Exception:
+                        annual = None
+                    try:
+                        quarterly = item.quarterly_financials
+                    except Exception:
+                        quarterly = None
+                    profile = _company_profile_from_data(symbol, info, annual, quarterly, current_price)
+                    if profile["available"]:
+                        return DataResult(True, profile, "Yahoo Finance 기업·재무 데이터")
+                except Exception as exc:
+                    last_error = str(exc)
+            return DataResult(False, message=(
+                "Yahoo Finance에서 기업 개요·재무제표를 확인하지 못했습니다."
+                + (f" ({last_error[:180]})" if last_error else "")
+            ))
+        except ImportError:
+            return DataResult(False, message="기업 재무정보 모듈(yfinance)이 설치되지 않았습니다.")
 
     def ticker_name(self, ticker: str, date: str | None = None) -> str:
         if self.toss.configured:
