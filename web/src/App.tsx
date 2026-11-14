@@ -29,7 +29,6 @@ type NavItem = {
 
 const mainNav: NavItem[] = [
   { label: "대시보드", icon: LayoutDashboard, active: true },
-  { label: "시장 스캐너", icon: Search },
   { label: "종목 분석", icon: CandlestickChart },
   { label: "분석 기록", icon: BookOpen },
 ];
@@ -392,7 +391,7 @@ function App() {
     }
     return () => { active = false; };
   }, [mottoDate]);
-  const [activePage, setActivePage] = useState<"dashboard" | "stock-analysis" | "history">("dashboard");
+  const [activePage, setActivePage] = useState<"dashboard" | "market-analysis" | "stock-analysis" | "history">("dashboard");
   const [historyItems, setHistoryItems] = useState<Array<{analyzed_at:string;ticker:string;name:string;trading_date:string;matched:boolean;baseline_price?:number|null;current_price?:number|null;change_pct?:number|null;weekly?:{grade?:string};trade_plan?:unknown}>>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -605,24 +604,18 @@ function App() {
           <p className="nav-caption">WORKSPACE</p>
           {mainNav.map(({ label, icon: Icon }) => {
             const page = label === "종목 분석" ? "stock-analysis" : label === "분석 기록" ? "history" : "dashboard";
-            const selected = label !== "시장 스캐너" && activePage === page;
-            return <button type="button" className={selected ? "nav-link active" : "nav-link"} onClick={() => {
-              if (label === "시장 스캐너") {
-                setActivePage("dashboard");
-                window.setTimeout(() => document.getElementById("market-scanner")?.scrollIntoView({ behavior: "smooth" }), 0);
-              } else setActivePage(page as "dashboard" | "stock-analysis" | "history");
-            }} key={label}>
+            const selected = activePage === page;
+            return <button type="button" className={selected ? "nav-link active" : "nav-link"} onClick={() => setActivePage(page as "dashboard" | "stock-analysis" | "history")} key={label}>
               <Icon size={17} strokeWidth={1.8} /><span>{label}</span>
-              {label === "시장 스캐너" && <span className="nav-count">SCAN</span>}
             </button>;
           })}
 
           <p className="nav-caption market-caption">MARKET</p>
           {marketNav.map(({ label, icon: Icon }) => (
-            <a className="nav-link" href="#" key={label}>
+            <button type="button" className={activePage === "market-analysis" ? "nav-link active" : "nav-link"} onClick={() => setActivePage("market-analysis")} key={label}>
               <Icon size={17} strokeWidth={1.8} />
-              <span>{label}</span>
-            </a>
+              <span>{label === "시장 현황" ? "종합 시장분석실" : label}</span>
+            </button>
           ))}
         </nav>
 
@@ -636,7 +629,7 @@ function App() {
 
       <section className="main-area">
         <header className="topbar">
-          <div className="breadcrumb"><span>WORKSPACE</span><b>/</b> {activePage === "stock-analysis" ? "종목 분석" : activePage === "history" ? "분석 기록" : "대시보드"}</div>
+          <div className="breadcrumb"><span>WORKSPACE</span><b>/</b> {activePage === "stock-analysis" ? "종목 분석" : activePage === "history" ? "분석 기록" : activePage === "market-analysis" ? "종합 시장분석실" : "대시보드"}</div>
           <div className="top-actions">
             <button className="icon-button" aria-label="알림"><Bell size={17} /><i /></button>
             <div className="user-chip"><span className="user-avatar">나</span><span>투자자</span><ChevronDown size={14} /></div>
@@ -730,47 +723,6 @@ function App() {
             </article>
 
             <div className="right-column">
-              <article className="panel chart-panel" id="chart-desk">
-                <div className="section-heading compact">
-                  <div><span className="section-kicker">TECHNICAL ANALYSIS DESK</span><h2>차트 분석 모니터</h2></div>
-                  <form className="chart-controls" onSubmit={(event) => { event.preventDefault(); if (!/^\d{6}$/.test(tickerInput)) { setStockError("종목코드 6자리를 입력해 주세요."); return; } setSelectedTicker(tickerInput); }}><label className="ticker-search"><Search size={15}/><input aria-label="종목코드" value={tickerInput} onChange={(event) => setTickerInput(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="종목코드 6자리" maxLength={6} /></label><button className="ticker-submit" type="submit" disabled={stockLoading}>{stockLoading ? "조회 중" : "종목 조회"}</button><div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div></form>
-                </div>
-                <div className="chart-empty chart-workspace">
-                  <div className="chart-grid-lines"><i /><i /><i /><i /></div>
-                  {stockLoading ? <div className="chart-empty-content"><b>종목 데이터 조회 중…</b></div> : stockError ? <div className="chart-empty-content"><b>{stockError}</b></div> : stockAnalysis ? <PriceChart bars={activeBars} period={chartPeriod} /> : <div className="chart-empty-content"><CandlestickChart size={25} /><b>종목 조회 대기</b><span>예: 삼성전자 005930 · 종목코드 입력 후 조회</span></div>}
-                </div>
-                {stockAnalysis && <div className="stock-plan">
-                  <div className="stock-plan-heading"><b>{stockAnalysis.name} · 매매 기준 점검</b><span>{stockAnalysis.trading_date}</span></div>
-                  <div className="stock-checks">
-                    {[
-                      ["RSI(10/14) 골든크로스", "rsi_cross_and_rising"],
-                      ["MACD(5/10/9) 골든크로스", "macd_cross_and_rising"],
-                      ["종가 MA10 상향 돌파", "ma10_breakout"],
-                    ].map(([label, key]) => <span key={key} className={stockAnalysis.signal?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.signal?.checks?.[key] ? "충족" : "미충족"} · {label}</span>)}
-                  </div>
-                  {stockAnalysis.latest?.trade_plan?.ready ? <div className="stock-plan-grid">
-                    <div><small>진입 참고 구간</small><b>{Math.round(stockAnalysis.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ {Math.round(stockAnalysis.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}</b></div>
-                    <div><small>손절 기준</small><b>{Math.round(stockAnalysis.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")}</b></div>
-                    <div><small>목표 1 · 2R</small><b>{Math.round(stockAnalysis.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}</b></div>
-                    <div><small>목표 2 · 3R</small><b>{Math.round(stockAnalysis.latest.trade_plan.target_2 ?? 0).toLocaleString("ko-KR")}</b></div>
-                  </div> : <div className="scanner-state">변동성 데이터 부족으로 진입·손절·목표 가격을 계산할 수 없습니다.</div>}
-                  <small className="stock-plan-warning">{stockAnalysis.latest?.trade_plan?.warning ?? "ATR 기반 참고값이며 매수 추천이 아닙니다."}</small>
-                </div>}
-                <div className="sector-watch-grid">
-                  <section className="sector-watch-card">
-                    <div className="sector-watch-title"><span><Flame size={15} /> 오늘의 강세 업종</span><small>상승률 상위</small></div>
-                    {strongestSectors.length ? <ul className="sector-list">{strongestSectors.map((sector) => <li key={sector.market + sector.name}><span>{sector.name}<small>{sector.market === "KOSPI" ? "코스피" : "코스닥"} · {sector.stock_count}종목 평균</small></span><b className="positive">+{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="sector-empty">업종 데이터 수신 대기 또는 상승 업종 없음</div>}
-                  </section>
-                  <section className="sector-watch-card">
-                    <div className="sector-watch-title"><span><ShieldAlert size={15} /> 오늘의 약세 업종</span><small>하락률 상위</small></div>
-                    {weakestSectors.length ? <ul className="sector-list">{weakestSectors.map((sector) => <li key={sector.market + sector.name}><span>{sector.name}<small>{sector.market === "KOSPI" ? "코스피" : "코스닥"} · {sector.stock_count}종목 평균</small></span><b className="negative">{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="sector-empty">업종 데이터 수신 대기 또는 하락 업종 없음</div>}
-                  </section>
-                </div>
-                <div className="market-one-line">
-                  <span className="one-line-label">MARKET IN ONE LINE</span>
-                  <p>{buildMarketNarrative(kospi, kosdaq)}</p>
-                </div>
-              </article>
             </div>
           </section>
 
@@ -851,8 +803,83 @@ function App() {
             <div className="scanner-footnote">등급은 완료 주봉의 종가·MA10/20 위치와 기울기, MACD, RSI를 100점으로 점수화합니다(A 80점 이상 / B 55~79점 / C 54점 이하). 주봉 데이터 부족은 C로 분류합니다. 데이터 출처: KRX 종목 목록 및 설정된 시세 공급자. 스캔은 조회 전용이며 주문을 실행하지 않습니다.</div>
           </section>
 
+                        <article className="panel chart-panel" id="chart-desk">
+                <div className="section-heading compact">
+                  <div><span className="section-kicker">TECHNICAL ANALYSIS DESK</span><h2>차트 분석 모니터</h2></div>
+                  <form className="chart-controls" onSubmit={(event) => { event.preventDefault(); if (!/^\d{6}$/.test(tickerInput)) { setStockError("종목코드 6자리를 입력해 주세요."); return; } setSelectedTicker(tickerInput); }}><label className="ticker-search"><Search size={15}/><input aria-label="종목코드" value={tickerInput} onChange={(event) => setTickerInput(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="종목코드 6자리" maxLength={6} /></label><button className="ticker-submit" type="submit" disabled={stockLoading}>{stockLoading ? "조회 중" : "종목 조회"}</button><div className="period-toggle"><button type="button" className={chartPeriod === "daily" ? "selected" : ""} onClick={() => setChartPeriod("daily")}>일봉</button><button type="button" className={chartPeriod === "weekly" ? "selected" : ""} onClick={() => setChartPeriod("weekly")}>주봉</button></div></form>
+                </div>
+                <div className="chart-empty chart-workspace">
+                  <div className="chart-grid-lines"><i /><i /><i /><i /></div>
+                  {stockLoading ? <div className="chart-empty-content"><b>종목 데이터 조회 중…</b></div> : stockError ? <div className="chart-empty-content"><b>{stockError}</b></div> : stockAnalysis ? <PriceChart bars={activeBars} period={chartPeriod} /> : <div className="chart-empty-content"><CandlestickChart size={25} /><b>종목 조회 대기</b><span>예: 삼성전자 005930 · 종목코드 입력 후 조회</span></div>}
+                </div>
+                {stockAnalysis && <div className="stock-plan">
+                  <div className="stock-plan-heading"><b>{stockAnalysis.name} · 매매 기준 점검</b><span>{stockAnalysis.trading_date}</span></div>
+                  <div className="stock-checks">
+                    {[
+                      ["RSI(10/14) 골든크로스", "rsi_cross_and_rising"],
+                      ["MACD(5/10/9) 골든크로스", "macd_cross_and_rising"],
+                      ["종가 MA10 상향 돌파", "ma10_breakout"],
+                    ].map(([label, key]) => <span key={key} className={stockAnalysis.signal?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.signal?.checks?.[key] ? "충족" : "미충족"} · {label}</span>)}
+                  </div>
+                  {stockAnalysis.latest?.trade_plan?.ready ? <div className="stock-plan-grid">
+                    <div><small>진입 참고 구간</small><b>{Math.round(stockAnalysis.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ {Math.round(stockAnalysis.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}</b></div>
+                    <div><small>손절 기준</small><b>{Math.round(stockAnalysis.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")}</b></div>
+                    <div><small>목표 1 · 2R</small><b>{Math.round(stockAnalysis.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}</b></div>
+                    <div><small>목표 2 · 3R</small><b>{Math.round(stockAnalysis.latest.trade_plan.target_2 ?? 0).toLocaleString("ko-KR")}</b></div>
+                  </div> : <div className="scanner-state">변동성 데이터 부족으로 진입·손절·목표 가격을 계산할 수 없습니다.</div>}
+                  <small className="stock-plan-warning">{stockAnalysis.latest?.trade_plan?.warning ?? "ATR 기반 참고값이며 매수 추천이 아닙니다."}</small>
+                </div>}
+                <div className="sector-watch-grid">
+                  <section className="sector-watch-card">
+                    <div className="sector-watch-title"><span><Flame size={15} /> 오늘의 강세 업종</span><small>상승률 상위</small></div>
+                    {strongestSectors.length ? <ul className="sector-list">{strongestSectors.map((sector) => <li key={sector.market + sector.name}><span>{sector.name}<small>{sector.market === "KOSPI" ? "코스피" : "코스닥"} · {sector.stock_count}종목 평균</small></span><b className="positive">+{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="sector-empty">업종 데이터 수신 대기 또는 상승 업종 없음</div>}
+                  </section>
+                  <section className="sector-watch-card">
+                    <div className="sector-watch-title"><span><ShieldAlert size={15} /> 오늘의 약세 업종</span><small>하락률 상위</small></div>
+                    {weakestSectors.length ? <ul className="sector-list">{weakestSectors.map((sector) => <li key={sector.market + sector.name}><span>{sector.name}<small>{sector.market === "KOSPI" ? "코스피" : "코스닥"} · {sector.stock_count}종목 평균</small></span><b className="negative">{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="sector-empty">업종 데이터 수신 대기 또는 하락 업종 없음</div>}
+                  </section>
+                </div>
+                <div className="market-one-line">
+                  <span className="one-line-label">MARKET IN ONE LINE</span>
+                  <p>{buildMarketNarrative(kospi, kosdaq)}</p>
+                </div>
+              </article>
+
+
           <footer className="page-footer"><span>© 2026 DONMULWON 2</span><span>DATA FIRST · RISK AWARE · NO AUTO TRADING</span></footer>
           </>}
+          {activePage === "market-analysis" && <section className="market-analysis-page">
+            <div className="page-title-row"><div><span className="section-kicker">GLOBAL & KOREA MARKET INTELLIGENCE</span><h1>종합 시장분석실</h1><p>확인 가능한 국내 시장 데이터와 AI 해석을 한곳에서 점검합니다.</p></div><span className="history-retention">KRX · {kospi?.date ?? kosdaq?.date ?? "데이터 대기"}</span></div>
+            <div className="market-grid market-analysis-summary">
+              {([["KOSPI","코스피",kospi],["KOSDAQ","코스닥",kosdaq]] as const).map(([code,label,data]) => {
+                const index=data?.index; const rising=(index?.change_pct ?? 0)>0; const falling=(index?.change_pct ?? 0)<0;
+                return <article className="market-card" key={code}><div className="card-top"><span>{label}</span><span className="market-tag">KRX INDEX</span></div>
+                  <div className="market-value">{index ? index.close.toLocaleString("ko-KR",{maximumFractionDigits:2}) : "—"}</div>
+                  <div className={rising ? "index-change positive" : falling ? "index-change negative" : "index-change neutral"}>{index ? `${index.change>0?"+":""}${index.change.toLocaleString("ko-KR",{maximumFractionDigits:2})} (${index.change_pct>0?"+":""}${index.change_pct.toFixed(2)}%)` : "지수 데이터 미수신"}</div>
+                  <div className="market-foot"><span>상승 ${formatCount(data?.advancers)} · 하락 ${formatCount(data?.decliners)}</span><span className="neutral-label">{data ? data.date : "미수신"}</span></div>
+                </article>;
+              })}
+              <article className="market-card accent-card"><div className="card-top"><span>시장 breadth</span><Activity size={16}/></div><div className="market-value">{formatCount(totalAdvancers)} <small>/ {formatCount(totalDecliners)}</small></div><div className="market-foot"><span>코스피 + 코스닥 상승 / 하락</span><span className="neutral-label">{bothMarketsReady ? "수신" : "부분 수신"}</span></div></article>
+              <article className="market-card"><div className="card-top"><span>총 거래대금</span><BarChart3 size={16}/></div><div className="market-value">{formatTradingValue(totalTradingValue)}</div><div className="market-foot"><span>코스피 + 코스닥</span><span className="neutral-label">{bothMarketsReady ? "수신" : "부분 수신"}</span></div></article>
+            </div>
+            <article className="panel market-ai-brief">
+              <div className="section-heading compact"><div><span className="section-kicker">AI MARKET INTERPRETATION</span><h2>너구리의 시장 종합 의견</h2></div><span className="single-agent">{raccoonNote.status === "ready" ? "AI ANALYSIS READY" : raccoonNote.status === "loading" ? "ANALYZING" : "ANALYSIS UNAVAILABLE"}</span></div>
+              <p className="market-ai-note">{raccoonNote.status === "ready" ? raccoonNote.note : raccoonNote.status === "loading" ? "국내 시장 데이터와 수급을 바탕으로 장세를 분석하고 있습니다." : raccoonNote.error || "AI 시장 분석을 불러오지 못했습니다."}</p>
+              <div className="market-foot"><span>분석 기준일 · {raccoonNote.trading_date ?? kospi?.date ?? "—"}</span><span>{raccoonNote.model ?? "OPENROUTER AI"}</span></div>
+            </article>
+            <div className="market-analysis-columns">
+              <article className="panel"><div className="section-heading compact"><div><span className="section-kicker">SECTOR LEADERS</span><h2>강세 업종 TOP 5</h2></div><Flame size={17}/></div>
+                {strongestSectors.length ? <ul className="sector-list">{strongestSectors.map((sector)=><li key={sector.market+sector.name}><span>{sector.name}<small>{sector.market==="KOSPI"?"코스피":"코스닥"} · {sector.stock_count}종목</small></span><b className="positive">+{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="scanner-state">상승 업종 데이터가 없습니다.</div>}
+              </article>
+              <article className="panel"><div className="section-heading compact"><div><span className="section-kicker">SECTOR LAGGARDS</span><h2>약세 업종 TOP 5</h2></div><ShieldAlert size={17}/></div>
+                {weakestSectors.length ? <ul className="sector-list">{weakestSectors.map((sector)=><li key={sector.market+sector.name}><span>{sector.name}<small>{sector.market==="KOSPI"?"코스피":"코스닥"} · {sector.stock_count}종목</small></span><b className="negative">{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="scanner-state">하락 업종 데이터가 없습니다.</div>}
+              </article>
+            </div>
+            <article className="panel market-flows-panel"><div className="section-heading compact"><div><span className="section-kicker">INVESTOR POSITIONING</span><h2>투자자별 수급</h2></div><Activity size={17}/></div>
+              {Object.entries({...Object.fromEntries(Object.entries(kospi?.investor_flows?.values ?? {}).map(([key,value])=>[key,value])),...Object.fromEntries(Object.entries(kosdaq?.investor_flows?.values ?? {}).map(([key,value])=>[key,(Number((kospi?.investor_flows?.values ?? {})[key])||0)+value]))}).length ? <div className="market-flow-grid">{Object.entries({...Object.fromEntries(Object.entries(kospi?.investor_flows?.values ?? {}).map(([key,value])=>[key,value])),...Object.fromEntries(Object.entries(kosdaq?.investor_flows?.values ?? {}).map(([key,value])=>[key,(Number((kospi?.investor_flows?.values ?? {})[key])||0)+value]))}).map(([name,value])=><div key={name}><small>{name}</small><b className={value>0?"positive":value<0?"negative":""}>{value>0?"+":""}{Number(value).toLocaleString("ko-KR")}억원</b></div>)}</div> : <div className="scanner-state">투자자별 수급 데이터가 제공되지 않았습니다.</div>}
+            </article>
+            <article className="panel market-coverage-note"><b>데이터 범위 안내</b><p>현재 연동된 실시간 분석 데이터는 코스피·코스닥 중심입니다. 미국 지수와 글로벌 거시지표는 아직 데이터 공급이 연결되지 않아 이 화면에서 임의의 수치를 표시하지 않습니다.</p><p>시장 방향은 지수 등락뿐 아니라 상승·하락 종목 수, 업종 확산, 투자자 수급을 함께 확인해야 합니다.</p></article>
+          </section>}
           {activePage === "stock-analysis" && <section className="stock-analysis-page">
             <div className="page-title-row"><div><span className="section-kicker">DEEP TECHNICAL ANALYSIS</span><h1>종목 분석</h1><p>너구리 분석실과 분리된 종목 전용 분석 화면입니다.</p></div><span className="single-agent">DAILY · WEEKLY · RISK PLAN</span></div>
             <article className="panel stock-analysis-main">
