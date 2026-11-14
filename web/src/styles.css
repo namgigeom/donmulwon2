@@ -122,7 +122,7 @@ button { color: inherit; }
 .desk-character { position: absolute; z-index: 4; left: 50%; bottom: 43px; display: flex; flex-direction: column; align-items: center; transform: translateX(-50%); }
 .character-status { margin-bottom: 2px; padding: 4px 7px; border: 1px solid rgba(186,215,169,.2); border-radius: 3px; color: #b9d2ae; background: #26392e; font: 6px var(--mono); letter-spacing: .6px; white-space: nowrap; }
 .character-status i { display: inline-block; width: 4px; height: 4px; margin-right: 4px; border-radius: 50%; background: #a7d69a; }
-.character-placeholder { width: 65px; height: 62px; display: grid; place-items: center; font-size: 43px; image-rendering: pixelated; filter: drop-shadow(0 5px 3px rgba(0,0,0,.22)); }
+.character-placeholder { width: 170px; height: 76px; display: block; background-image: url("/assets/Gemini_Generated_Image_f889qsf889qsf889.jpg"); background-repeat: no-repeat; background-size: 400% 500%; background-position: 0 0; image-rendering: pixelated; filter: drop-shadow(0 5px 3px rgba(0,0,0,.28)); }
 .character-name { margin-top: -1px; color: #edf2e8; font-size: 11px; font-weight: 700; text-shadow: 0 1px 4px #17221b; }.character-name span { margin-left: 4px; color: #9fb49e; font: 6px var(--mono); }
 .character-caption { margin-top: 3px; color: #9eafa0; font-size: 8px; white-space: nowrap; }
 .scene-footer { position: absolute; bottom: 13px; left: 18px; right: 18px; display: flex; justify-content: space-between; color: #72867a; font: 7px var(--mono); letter-spacing: .5px; }.scene-footer span:last-child { font-family: "Noto Sans KR", sans-serif; letter-spacing: 0; }
@@ -411,16 +411,13 @@ button { color: inherit; }
 .sector-list li b { flex-shrink:0; font:11px var(--mono); }
 
 /* 너구리 분석 상태 애니메이션 */
-.desk-character.working .character-placeholder { animation: raccoon-focus .48s ease-in-out infinite alternate; }
-.character-placeholder { position:relative; }
 .character-work-effect { position:absolute; right:0; bottom:7px; padding:2px 4px; border:1px solid rgba(191,220,172,.35); border-radius:3px; color:#d8e8c9; background:#26392e; font:10px var(--mono); opacity:0; transform:translateY(4px); }
-.desk-character.working .character-work-effect { opacity:1; animation:key-tap .35s ease-in-out infinite alternate; }
 .desk-character.working .character-status i, .live-label.working i { animation:analyst-pulse .7s ease-in-out infinite alternate; }
 .desk-character.working .character-caption { color:#d4e6c9; }
 @keyframes raccoon-focus { from { transform:translateY(0) rotate(-2deg); } to { transform:translateY(-4px) rotate(2deg); } }
 @keyframes key-tap { from { transform:translateY(3px) rotate(-8deg); } to { transform:translateY(-2px) rotate(8deg); } }
 @keyframes analyst-pulse { from { opacity:.45; box-shadow:0 0 0 0 rgba(167,214,154,0); } to { opacity:1; box-shadow:0 0 0 4px rgba(167,214,154,.12); } }
-@media (prefers-reduced-motion: reduce) { .desk-character.working .character-placeholder, .desk-character.working .character-work-effect, .desk-character.working .character-status i, .live-label.working i { animation:none; } }
+@media (prefers-reduced-motion: reduce) { .desk-character.working .character-status i, .live-label.working i { animation:none; } }
 
 
 /* A/B/C scanner grades: ordered by weekly trend strength */
