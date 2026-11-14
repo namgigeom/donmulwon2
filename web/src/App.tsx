@@ -405,6 +405,10 @@ function App() {
   const apiBase = "";
   const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
   const [showSystemStatus, setShowSystemStatus] = useState(false);
+  const [systemChecks, setSystemChecks] = useState<Array<{id:string;label:string;status:string;detail:string}>>([]);
+  const [systemCheckLoading, setSystemCheckLoading] = useState(false);
+  const [systemCheckError, setSystemCheckError] = useState("");
+  const [systemCheckedAt, setSystemCheckedAt] = useState("");
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
   const [raccoonNote, setRaccoonNote] = useState<{status:"loading"|"ready"|"error";trading_date?:string;note?:string;model?:string;error?:string}>({status:"loading"});
   const [scanMarket, setScanMarket] = useState<MarketCode>("ALL");
@@ -421,6 +425,24 @@ function App() {
     : stockLoading ? "선택한 종목의 차트와 지표를 분석 중입니다."
       : scanResult ? `분석 완료 · ${scanResult.scanned.toLocaleString("ko-KR")}종목 확인`
       : "대기 중 · 스캔을 시작하면 분석을 진행합니다.";
+
+
+  async function openSystemStatus() {
+    setShowSystemStatus(true);
+    setSystemCheckLoading(true);
+    setSystemCheckError("");
+    try {
+      const response = await fetch(apiBase + "/api/system/status", { cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.detail || "연결 상태를 확인하지 못했습니다.");
+      setSystemChecks(Array.isArray(payload.checks) ? payload.checks : []);
+      setSystemCheckedAt(payload.checked_at || "");
+    } catch (error) {
+      setSystemCheckError(error instanceof Error ? error.message : "상태 확인 실패");
+    } finally {
+      setSystemCheckLoading(false);
+    }
+  }
 
   async function runMarketScan() {
     setScanLoading(true); setScanError(""); setScanResult(null); setScanProgress(null);
@@ -597,10 +619,7 @@ function App() {
         </nav>
 
         <div className="sidebar-bottom">
-          <div className="connection-card">
-            <span className="connection-dot" />
-            <span><b>{apiStatus === "Python API 연결됨" ? "분석 엔진 연결됨" : "시스템 연결 확인 중"}</b><small>{apiStatus}</small></span>
-          </div>
+          <a className="nav-link muted system-status-nav" href="#" onClick={(event) => { event.preventDefault(); void openSystemStatus(); }}><Database size={17} />연결 상태</a>
           <a className="nav-link muted" href="#"><Settings2 size={17} />설정</a>
           <a className="nav-link muted" href="#"><CircleHelp size={17} />도움말</a>
           <div className="sidebar-version">DONMULWON 2.0 <span>WEB PREVIEW</span></div>
@@ -611,7 +630,6 @@ function App() {
         <header className="topbar">
           <div className="breadcrumb"><span>WORKSPACE</span><b>/</b> {activePage === "stock-analysis" ? "종목 분석" : activePage === "history" ? "분석 기록" : "대시보드"}</div>
           <div className="top-actions">
-            <span className="market-status"><i /> {apiStatus}</span>
             <button className="icon-button" aria-label="알림"><Bell size={17} /><i /></button>
             <div className="user-chip"><span className="user-avatar">나</span><span>투자자</span><ChevronDown size={14} /></div>
           </div>
@@ -772,29 +790,7 @@ function App() {
               <div className="signal-row"><span className="signal-index">03</span><span><b>MA10 상향 돌파</b><small>종가 기준 돌파 확인</small></span><span className="signal-pending">대기</span></div>
               <div className="strategy-note"><Sparkles size={14} /> 세 가지 조건을 모두 충족해야 발굴 후보가 됩니다.</div>
             </article>
-            <article className={"panel checklist-panel system-status-panel" + (showSystemStatus ? " expanded" : "")}>
-              <button
-                type="button"
-                className="system-status-toggle"
-                aria-expanded={showSystemStatus}
-                onClick={() => setShowSystemStatus(value => !value)}
-              >
-                <span className="system-status-toggle-icon"><Database size={18} /></span>
-                <span className="system-status-toggle-copy">
-                  <span className="section-kicker">SYSTEM STATUS</span>
-                  <b>연결 및 준비 상태</b>
-                  <small>{showSystemStatus ? "상세 상태 접기" : "필요할 때 눌러서 확인"}</small>
-                </span>
-                <span className={"system-status-chevron" + (showSystemStatus ? " open" : "")}>⌄</span>
-              </button>
-              {showSystemStatus && <div className="system-status-details">
-                <div className="system-row"><span>국내 시장 데이터</span><span className="status-wait">{bothMarketsReady ? "수신" : apiStatus}</span></div>
-                <div className="system-row"><span>OpenRouter AI</span><span className="status-wait">연결 전</span></div>
-                <div className="system-row"><span>토스증권 API</span><span className="status-wait">연결 전</span></div>
-                <div className="system-row"><span>분석 데이터베이스</span><span className="status-wait">점검 예정</span></div>
-                <div className="system-hint"><ArrowDownRight size={14} /> 실제 연결 및 응답 검증 후 상태가 변경됩니다.</div>
-              </div>}
-            </article>
+
           </section>
 
 
@@ -974,6 +970,30 @@ function App() {
 
         </div>
       </section>
+
+      {showSystemStatus && <div className="system-status-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowSystemStatus(false); }}>
+        <section className="system-status-dialog" role="dialog" aria-modal="true" aria-labelledby="system-status-title">
+          <header className="system-status-dialog-head">
+            <div><span className="section-kicker">SYSTEM DIAGNOSTICS</span><h2 id="system-status-title">연결 상태</h2><p>각 서비스에 실제 요청을 보내 응답을 확인합니다.</p></div>
+            <button type="button" className="system-status-close" aria-label="닫기" onClick={() => setShowSystemStatus(false)}>×</button>
+          </header>
+          {systemCheckLoading && <div className="system-status-message"><span className="loading-pulse" /> 각 연결 상태를 확인하는 중입니다.</div>}
+          {systemCheckError && <div className="system-status-message error">{systemCheckError}</div>}
+          {!systemCheckLoading && systemChecks.map((check) => {
+            const labels: Record<string,string> = {connected:"연결됨",error:"연결 실패",not_configured:"미설정",disabled:"비활성화"};
+            return <div className="system-check-row" key={check.id}>
+              <span className={"system-check-dot " + check.status} />
+              <div><b>{check.label}</b><small>{check.detail}</small></div>
+              <strong className={"system-check-state " + check.status}>{labels[check.status] || "확인 불가"}</strong>
+            </div>;
+          })}
+          <footer className="system-status-dialog-foot">
+            <span>{systemCheckedAt ? "확인 시각 " + new Date(systemCheckedAt).toLocaleString("ko-KR") : "아직 확인 전"}</span>
+            <button type="button" className="ticker-submit" onClick={() => void openSystemStatus()} disabled={systemCheckLoading}>{systemCheckLoading ? "확인 중…" : "다시 확인"}</button>
+          </footer>
+          <p className="system-status-disclaimer">토스 API는 OAuth 인증 성공 여부를 확인합니다. 실제 계좌 조회 권한과 잔고 데이터까지 보장하는 검사는 아닙니다.</p>
+        </section>
+      </div>}
     </main>
   );
 }
