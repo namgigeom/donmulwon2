@@ -743,16 +743,38 @@ function App() {
                         <div><small>순이익</small><b>{formatCompanyMoney(stockAnalysis.company.quarterly?.net_income, stockAnalysis.company.currency)}</b></div>
                       </div>
                     </div>
-                    <div className="company-outlook">
-                      <div className="company-subheading"><b>애널리스트 전망</b><span>Yahoo Finance 컨센서스</span></div>
-                      <div className="company-financial-grid">
-                        <div><small>투자의견</small><b>{stockAnalysis.company.outlook?.rating || "의견 미수신"}</b></div>
-                        <div><small>평균 목표주가</small><b>{formatCompanyPrice(stockAnalysis.company.outlook?.target_mean_price, stockAnalysis.company.currency)}</b></div>
-                        <div><small>현재가 대비 목표 상승여력</small><b>{typeof stockAnalysis.company.outlook?.target_upside_pct === "number" ? (stockAnalysis.company.outlook.target_upside_pct > 0 ? "+" : "") + stockAnalysis.company.outlook.target_upside_pct.toFixed(1) + "%" : "—"}</b></div>
-                        <div><small>의견 제시 애널리스트</small><b>{stockAnalysis.company.outlook?.analyst_count ? stockAnalysis.company.outlook.analyst_count + "명" : "—"}</b></div>
+                    <div className="company-outlook raccoon-outlook">
+                      <div className="raccoon-analyst-heading">
+                        <div><span className="raccoon-analyst-kicker">WALL STREET SWING DESK · TOP 10% PERSONA</span><b>너구리의 스윙 투자 의견</b></div>
+                        <span className="raccoon-analyst-avatar">🦝</span>
                       </div>
+                      {(() => {
+                        const checks = Object.values(stockAnalysis.signal?.checks ?? {});
+                        const passed = checks.filter(Boolean).length;
+                        const grade = stockAnalysis.weekly?.grade ?? "C";
+                        const tradeReady = Boolean(stockAnalysis.latest?.trade_plan?.ready);
+                        const stance = grade === "A" && passed >= 3 ? "적극 관찰"
+                          : (grade === "A" || grade === "B") && passed >= 2 ? "눌림목 대기"
+                            : "관망 우선";
+                        const tone = stance === "적극 관찰" ? "positive" : stance === "눌림목 대기" ? "caution" : "negative";
+                        const comment = stance === "적극 관찰"
+                          ? "주봉 추세와 단기 진입 조건이 함께 살아 있구나너굴. 다만 급등 추격은 금물, 계획된 가격대에서 거래량과 손익비를 확인하고 들어가자너굴."
+                          : stance === "눌림목 대기"
+                            ? "추세는 지켜볼 만하지만 아직 진입 신호가 완전히 모이지 않았구나너굴. 저항 돌파를 확인하거나 지지 구간까지 기다리는 편이 낫다너굴."
+                            : "지금은 억지로 수익을 만들 자리가 아니구나너굴. 추세와 진입 조건이 개선될 때까지 현금을 지키는 것도 실력이다너굴.";
+                        return <>
+                          <div className="raccoon-analyst-grid">
+                            <div><small>너구리의 투자의견</small><b className={tone}>{stance}</b></div>
+                            <div><small>주봉 추세 등급</small><b>{grade} · {stockAnalysis.weekly?.grade_score ?? "—"}점</b></div>
+                            <div><small>진입 조건 충족</small><b>{passed}/{checks.length || 4}개</b></div>
+                            <div><small>스윙 계획</small><b>{tradeReady ? "가격 계획 산출 완료" : "진입 계획 보류"}</b></div>
+                          </div>
+                          <p className="raccoon-analyst-comment">“{comment}”</p>
+                        </>;
+                      })()}
+                      <div className="raccoon-analyst-signature">너구리 · 월가 상위 10%를 자처하는 스윙 전문 애널리스트</div>
                     </div>
-                    <div className="company-disclaimer">사업 개요·재무제표·애널리스트 컨센서스는 Yahoo Finance 제공 자료입니다. 애널리스트 목표가는 전망치일 뿐 실제 주가나 실적을 보장하지 않습니다. 자료가 없는 항목은 비워 둡니다.{stockAnalysis.company.website ? <> · <a href={stockAnalysis.company.website} target="_blank" rel="noreferrer">회사 홈페이지</a></> : null}</div>
+                    <div className="company-disclaimer">너구리의 의견은 DONMULWON의 주봉 등급·기술적 진입 조건·가격 계획을 바탕으로 한 스윙 관점의 규칙 기반 판정입니다. 데이터가 부족하면 관망으로 판단하며 수익을 보장하지 않습니다.{stockAnalysis.company.website ? <> · <a href={stockAnalysis.company.website} target="_blank" rel="noreferrer">회사 홈페이지</a></> : null}</div>
                   </> : <div className="scanner-state">{stockAnalysis.company?.message || "기업 재무·사업 정보를 제공받지 못했습니다. 시세·기술적 분석은 정상적으로 표시됩니다."}</div>}
                 </section>
                 <div className="stock-detail-grid">
