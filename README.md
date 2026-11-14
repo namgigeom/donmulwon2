@@ -83,6 +83,36 @@ KRX_PW=본인_KRX_로그인_비밀번호
 - 업종/테마별 강도, 뉴스 기반 AI 토론·검증, 전략 백테스트는 추가 개발 대상입니다.
 - API 개발 서버는 localhost 전용으로 실행하세요. 인증 없는 API를 공용 인터넷에 노출하지 마세요.
 
+## 친구와 비공개 공유 (최대 2명 사용 권장)
+
+공유 기능은 기존 개인용 서버와 분리된 별도 인스턴스로 실행합니다.
+
+- 개인용 웹사이트/API: 기존 `start_donmulwon.ps1` (5173 / 8000)
+- 공유용 웹사이트/API: `start_donmulwon_share.ps1` (5174 / 8001)
+- 공유용 API는 `DONMULWON_SHARE_MODE=1`로 실행되며 `/api/toss` 및 하위 경로를 서버에서 HTTP 404로 차단합니다.
+- 공유용 웹사이트는 상대 경로 `/api`를 사용하고 Vite 프록시가 공유 API(8001)로 전달합니다.
+- 공유용 포트는 로컬호스트에만 바인딩됩니다. Tailscale Serve가 tailnet 내부 HTTPS 주소로 프록시합니다.
+- Tailscale에 본인 계정과 친구 한 명만 초대하세요. Tailscale Personal 무료 플랜은 최대 6명까지 지원하지만, 이 앱은 본인과 친구 1명만 초대해 사용하도록 구성합니다.
+- 친구도 Tailscale 앱을 설치하고 초대받은 계정으로 로그인해야 접속할 수 있습니다. 공개 인터넷에 사이트를 개방하는 방식이 아닙니다.
+- 이 PC가 켜져 있고 공유 서버와 Tailscale이 실행 중일 때만 접속할 수 있습니다.
+
+Windows 공유 실행:
+```powershell
+git pull origin web-rebuild
+powershell -ExecutionPolicy Bypass -File .\\start_donmulwon_share.ps1
+```
+
+공유용 로컬 미리보기는 http://127.0.0.1:5174 입니다. 스크립트가 Tailscale Serve를 자동 설정하지 못하면 Tailscale 로그인 후 아래 명령을 실행하세요.
+
+```powershell
+tailscale serve --bg 5174
+tailscale serve status
+```
+
+표시되는 `https://...ts.net` 주소를 친구에게 전달하세요. 공유용 API의 `/api/toss/status`, `/api/toss/accounts`, `/api/toss/holdings`는 404로 차단되며, 기존 개인용 서버(8000)는 별도 로컬 포트로 유지됩니다. 공유용 분석 기록은 두 사용자가 함께 보는 SQLite 기록을 사용합니다.
+
+공유 중에는 PC를 끄거나 절전 모드로 두지 마세요. 공유 기능은 tailnet 구성원만 접근할 수 있으며, Tailscale 사용자 초대는 앱 코드가 아니라 Tailscale 관리자 화면에서 직접 관리합니다.
+
 ## 기존 데스크톱 앱
 
 기존 Python/PySide6 데스크톱 프로그램은 레거시로 보존합니다. 웹 버전이 충분히 검증되기 전까지 삭제하거나 대체하지 않습니다.
