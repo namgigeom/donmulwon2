@@ -404,6 +404,7 @@ function App() {
   const [stockError, setStockError] = useState("");
   const apiBase = "";
   const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
+  const [showSystemStatus, setShowSystemStatus] = useState(false);
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
   const [raccoonNote, setRaccoonNote] = useState<{status:"loading"|"ready"|"error";trading_date?:string;note?:string;model?:string;error?:string}>({status:"loading"});
   const [scanMarket, setScanMarket] = useState<MarketCode>("ALL");
@@ -771,16 +772,28 @@ function App() {
               <div className="signal-row"><span className="signal-index">03</span><span><b>MA10 상향 돌파</b><small>종가 기준 돌파 확인</small></span><span className="signal-pending">대기</span></div>
               <div className="strategy-note"><Sparkles size={14} /> 세 가지 조건을 모두 충족해야 발굴 후보가 됩니다.</div>
             </article>
-            <article className="panel checklist-panel">
-              <div className="section-heading compact">
-                <div><span className="section-kicker">SYSTEM STATUS</span><h2>연결 및 준비 상태</h2></div>
-                <Database size={18} />
-              </div>
-              <div className="system-row"><span>국내 시장 데이터</span><span className="status-wait">{bothMarketsReady ? "수신" : apiStatus}</span></div>
-              <div className="system-row"><span>OpenRouter AI</span><span className="status-wait">연결 전</span></div>
-              <div className="system-row"><span>토스증권 API</span><span className="status-wait">연결 전</span></div>
-              <div className="system-row"><span>분석 데이터베이스</span><span className="status-wait">점검 예정</span></div>
-              <div className="system-hint"><ArrowDownRight size={14} /> 실제 연결 및 응답 검증 후 상태가 변경됩니다.</div>
+            <article className={"panel checklist-panel system-status-panel" + (showSystemStatus ? " expanded" : "")}>
+              <button
+                type="button"
+                className="system-status-toggle"
+                aria-expanded={showSystemStatus}
+                onClick={() => setShowSystemStatus(value => !value)}
+              >
+                <span className="system-status-toggle-icon"><Database size={18} /></span>
+                <span className="system-status-toggle-copy">
+                  <span className="section-kicker">SYSTEM STATUS</span>
+                  <b>연결 및 준비 상태</b>
+                  <small>{showSystemStatus ? "상세 상태 접기" : "필요할 때 눌러서 확인"}</small>
+                </span>
+                <span className={"system-status-chevron" + (showSystemStatus ? " open" : "")}>⌄</span>
+              </button>
+              {showSystemStatus && <div className="system-status-details">
+                <div className="system-row"><span>국내 시장 데이터</span><span className="status-wait">{bothMarketsReady ? "수신" : apiStatus}</span></div>
+                <div className="system-row"><span>OpenRouter AI</span><span className="status-wait">연결 전</span></div>
+                <div className="system-row"><span>토스증권 API</span><span className="status-wait">연결 전</span></div>
+                <div className="system-row"><span>분석 데이터베이스</span><span className="status-wait">점검 예정</span></div>
+                <div className="system-hint"><ArrowDownRight size={14} /> 실제 연결 및 응답 검증 후 상태가 변경됩니다.</div>
+              </div>}
             </article>
           </section>
 
