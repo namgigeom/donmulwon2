@@ -582,6 +582,12 @@ function App() {
   const sectors = [ ...(kospi?.sectors ?? []), ...(kosdaq?.sectors ?? []) ];
   const strongestSectors = [...sectors].sort((a, b) => b.change_pct - a.change_pct).filter((item) => item.change_pct > 0).slice(0, 5);
   const weakestSectors = [...sectors].sort((a, b) => a.change_pct - b.change_pct).filter((item) => item.change_pct < 0).slice(0, 5);
+  const investorFlows: Record<string, number> = {};
+  for (const bulletin of [kospi, kosdaq]) {
+    for (const [name, value] of Object.entries(bulletin?.investor_flows?.values ?? {})) {
+      investorFlows[name] = (investorFlows[name] ?? 0) + value;
+    }
+  }
 
   return (
     <main className="app-shell">
@@ -722,8 +728,6 @@ function App() {
               <div className="scene-footer"><span>ONE ANALYST. ONE STANDARD.</span><span>분석 근거 없는 매수 의견은 제시하지 않습니다.</span></div>
             </article>
 
-            <div className="right-column">
-            </div>
           </section>
 
           <section className="bottom-grid">
@@ -856,7 +860,7 @@ function App() {
                 return <article className="market-card" key={code}><div className="card-top"><span>{label}</span><span className="market-tag">KRX INDEX</span></div>
                   <div className="market-value">{index ? index.close.toLocaleString("ko-KR",{maximumFractionDigits:2}) : "—"}</div>
                   <div className={rising ? "index-change positive" : falling ? "index-change negative" : "index-change neutral"}>{index ? `${index.change>0?"+":""}${index.change.toLocaleString("ko-KR",{maximumFractionDigits:2})} (${index.change_pct>0?"+":""}${index.change_pct.toFixed(2)}%)` : "지수 데이터 미수신"}</div>
-                  <div className="market-foot"><span>상승 ${formatCount(data?.advancers)} · 하락 ${formatCount(data?.decliners)}</span><span className="neutral-label">{data ? data.date : "미수신"}</span></div>
+                  <div className="market-foot"><span>상승 {formatCount(data?.advancers)} · 하락 {formatCount(data?.decliners)}</span><span className="neutral-label">{data ? data.date : "미수신"}</span></div>
                 </article>;
               })}
               <article className="market-card accent-card"><div className="card-top"><span>시장 breadth</span><Activity size={16}/></div><div className="market-value">{formatCount(totalAdvancers)} <small>/ {formatCount(totalDecliners)}</small></div><div className="market-foot"><span>코스피 + 코스닥 상승 / 하락</span><span className="neutral-label">{bothMarketsReady ? "수신" : "부분 수신"}</span></div></article>
@@ -876,7 +880,7 @@ function App() {
               </article>
             </div>
             <article className="panel market-flows-panel"><div className="section-heading compact"><div><span className="section-kicker">INVESTOR POSITIONING</span><h2>투자자별 수급</h2></div><Activity size={17}/></div>
-              {Object.entries({...Object.fromEntries(Object.entries(kospi?.investor_flows?.values ?? {}).map(([key,value])=>[key,value])),...Object.fromEntries(Object.entries(kosdaq?.investor_flows?.values ?? {}).map(([key,value])=>[key,(Number((kospi?.investor_flows?.values ?? {})[key])||0)+value]))}).length ? <div className="market-flow-grid">{Object.entries({...Object.fromEntries(Object.entries(kospi?.investor_flows?.values ?? {}).map(([key,value])=>[key,value])),...Object.fromEntries(Object.entries(kosdaq?.investor_flows?.values ?? {}).map(([key,value])=>[key,(Number((kospi?.investor_flows?.values ?? {})[key])||0)+value]))}).map(([name,value])=><div key={name}><small>{name}</small><b className={value>0?"positive":value<0?"negative":""}>{value>0?"+":""}{Number(value).toLocaleString("ko-KR")}억원</b></div>)}</div> : <div className="scanner-state">투자자별 수급 데이터가 제공되지 않았습니다.</div>}
+              {Object.keys(investorFlows).length ? <div className="market-flow-grid">{Object.entries(investorFlows).map(([name,value])=><div key={name}><small>{name}</small><b className={value>0?"positive":value<0?"negative":""}>{value>0?"+":""}{value.toLocaleString("ko-KR")}원</b></div>)}</div> : <div className="scanner-state">투자자별 수급 데이터가 제공되지 않았습니다.</div>}
             </article>
             <article className="panel market-coverage-note"><b>데이터 범위 안내</b><p>현재 연동된 실시간 분석 데이터는 코스피·코스닥 중심입니다. 미국 지수와 글로벌 거시지표는 아직 데이터 공급이 연결되지 않아 이 화면에서 임의의 수치를 표시하지 않습니다.</p><p>시장 방향은 지수 등락뿐 아니라 상승·하락 종목 수, 업종 확산, 투자자 수급을 함께 확인해야 합니다.</p></article>
           </section>}
