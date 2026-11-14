@@ -256,39 +256,82 @@ function PriceChart({ bars, period }: { bars: Candle[]; period: "daily" | "weekl
     <div className="indicator-legend"><span className="legend-rsi10">RSI10</span><span className="legend-rsi14">RSI14</span><span className="legend-macd">MACD</span><span className="legend-signal">Signal</span></div>
   </div>;
 }
-const dailyMottos = [
-  ["시장은 서두르는 손보다 기다리는 눈에 기회를 준다너굴.", "오늘 못 사도 괜찮다너굴. 좋은 가격이 올 때까지 현금을 지키는 것도 전략이다너굴."],
-  ["오르는 주식보다 왜 오르는지 아는 게 먼저다너굴.", "뉴스 한 줄에 뛰어들지 말고 실적과 수급부터 확인하자너굴."],
-  ["손실을 작게 끊는 녀석이 다음 기회를 잡는다너굴.", "손절은 패배 선언이 아니라 투자 계획을 지키는 행동이다너굴."],
-  ["확신이 클수록 반대 근거를 찾아봐야 한다너굴.", "내 생각이 틀릴 가능성까지 계산해야 진짜 분석이지너굴."],
-  ["현금은 놀고 있는 돈이 아니라 선택권이다너굴.", "살 종목이 없을 땐 억지로 매수하지 말고 기다려라너굴."],
-  ["좋은 기업도 아무 가격에나 사면 좋은 투자가 아니다너굴.", "기업의 가치와 내가 지불할 가격을 따로 생각하자너굴."],
-  ["수익률보다 먼저 지켜야 할 건 살아남는 원금이다너굴.", "한 번의 큰 손실이 여러 번의 작은 수익을 지우지 않게 하자너굴."],
-  ["남들이 환호할 때 숫자를 보고, 공포에 떨 때 가치를 봐라너굴.", "분위기보다 데이터가 먼저다너굴."],
-  ["매수 버튼을 누르기 전에 매도 기준부터 정해라너굴.", "진입 이유와 청산 조건이 없다면 아직 계획이 아니다너굴."],
-  ["급등은 기회일 수도 있지만 추격의 함정일 수도 있다너굴.", "놓친 상승을 쫓지 말고 다음 손익비 좋은 자리를 기다려라너굴."],
-  ["분산은 종목 수가 아니라 위험의 원천을 나누는 일이다너굴.", "이름만 다른 같은 위험에 몰려 있지 않은지 점검하자너굴."],
-  ["차트는 미래를 맞히는 수정구슬이 아니다너굴.", "가격과 거래량으로 시장 참여자의 행동을 읽는 도구다너굴."],
-  ["실적이 주가를 따라잡는지, 주가가 기대를 앞서가는지 보자너굴.", "성장률뿐 아니라 현금흐름과 밸류에이션도 확인하자너굴."],
-  ["계획 없는 물타기는 전략이 아니라 희망회로다너굴.", "추가 매수 전에는 투자 가설이 살아 있는지 다시 검증하자너굴."],
-  ["한 번의 예측보다 반복 가능한 원칙이 강하다너굴.", "매번 다른 판단을 하기보다 검증된 규칙을 지켜라너굴."],
-  ["시장은 네 매수가를 기억하지 않는다너굴.", "본전 생각보다 지금부터의 기대수익과 위험을 따져라너굴."],
-  ["좋은 뉴스가 나와도 이미 가격에 반영됐을 수 있다너굴.", "발표 내용과 시장의 기대치 차이를 읽어야 한다너굴."],
-  ["공포에 팔고 탐욕에 사는 습관부터 버려라너굴.", "감정이 커질수록 주문을 늦추고 체크리스트를 펼쳐라너굴."],
-  ["작은 수익을 자주 내는 것보다 큰 실수를 피하는 게 중요하다너굴.", "손실 한도와 포지션 크기를 먼저 관리하자너굴."],
-  ["모르는 종목에 투자하는 건 분석이 아니라 추측이다너굴.", "사업 구조와 돈 버는 방식을 설명할 수 있을 때까지 공부하자너굴."],
-  ["시장의 소음은 매일 바뀌지만 원칙은 쉽게 바뀌면 안 된다너굴.", "단기 뉴스에 장기 계획을 흔들리지 말자너굴."],
-  ["매수 기회는 한 번뿐이라는 생각이 가장 위험하다너굴.", "기회는 다시 온다. 자금과 판단력을 남겨둬라너굴."],
-  ["수익이 났다고 실력이 증명된 건 아니다너굴.", "운과 실력을 구분하려면 매매 이유와 결과를 기록해야 한다너굴."],
-  ["손실 난 종목에 애정을 주지 마라너굴.", "내가 틀렸다는 증거가 쌓이면 미련 없이 계획을 수정하자너굴."],
-  ["높은 목표수익률에는 그만큼의 위험이 따라온다너굴.", "기대수익만 보지 말고 손실 가능성과 회복 기간도 계산하자너굴."],
-  ["시장이 쉬어갈 때 분석하는 사람이 다음 파동을 준비한다너굴.", "관심 종목의 가격대와 촉매를 미리 정리해두자너굴."],
-  ["남의 수익 인증은 네 투자 근거가 될 수 없다너굴.", "내 계좌의 목표와 위험 감내 수준에 맞춰 판단하자너굴."],
-  ["레버리지는 수익뿐 아니라 실수도 키운다너굴.", "구조를 완전히 이해하지 못했다면 손대지 않는 게 낫다너굴."],
-  ["분석의 마지막은 매수 결론이 아니라 행동 계획이다너굴.", "매수·관망·손절 조건을 숫자로 적어두자너굴."],
-  ["시장을 이기려 애쓰기 전에 시장에서 퇴장당하지 마라너굴.", "한 종목에 계좌의 운명을 걸지 말고 생존부터 챙기자너굴."],
-  ["기다림도 기준이 있을 때 투자 전략이 된다너굴.", "목표 가격과 무효화 조건을 정하고 차분히 기다려라너굴."]
-] as const;
+type WeatherSnapshot = {
+  temperature: number;
+  apparentTemperature: number;
+  weatherCode: number;
+  condition: string;
+};
+
+const seasonalMottos: Record<"spring" | "summer" | "autumn" | "winter", string[]> = {
+  spring: [
+    "새로운 시작은 조용히 뿌리내리는 법이다너굴. 서두르지 말고 오늘 할 수 있는 한 걸음부터 가자너굴.",
+    "꽃이 피기까지 기다림이 필요하듯 실력에도 시간이 필요하다너굴. 꾸준함을 쌓아가자너굴.",
+    "따뜻한 바람이 불어오는 계절이구나너굴. 마음은 가볍게, 하루의 선택은 신중하게 하자너굴."
+  ],
+  summer: [
+    "햇볕이 뜨거운 계절이구나너굴. 열정은 좋지만 무리하지 않는 지혜도 챙기자너굴.",
+    "한여름에도 나무는 그늘을 만든다너굴. 바쁠수록 잠깐 멈춰 숨을 고르자너굴.",
+    "뜨거운 계절일수록 수분과 휴식이 중요하다너굴. 오늘도 페이스를 지키자너굴."
+  ],
+  autumn: [
+    "바람에 가을 냄새가 묻어나는구나너굴. 지금까지의 걸음을 돌아보고 결실을 준비하자너굴.",
+    "잎이 물들 듯 시간은 차곡차곡 쌓인다너굴. 조급해하지 말고 내 속도로 가자너굴.",
+    "수확의 계절이라고 서두를 필요는 없다너굴. 잘 익은 결실은 기다림 끝에 오는 법이다너굴."
+  ],
+  winter: [
+    "찬 계절에도 땅속에서는 봄을 준비한다너굴. 보이지 않는 시간도 헛되지 않다너굴.",
+    "겨울은 속도를 늦추고 기초를 다지는 계절이다너굴. 오늘의 작은 준비를 소중히 하자너굴.",
+    "추운 날일수록 따뜻한 온기가 귀하다너굴. 스스로를 돌보며 꾸준히 나아가자너굴."
+  ]
+};
+
+const weatherMottos: Record<string, string[]> = {
+  clear: ["햇살이 좋은 날이구나너굴.", "맑은 하늘처럼 시야를 넓게 가져보자너굴."],
+  cloudy: ["구름이 낀 하늘이구나너굴.", "흐린 날에도 방향을 잃지 않는 게 중요하다너굴."],
+  rain: ["비가 내리는 날이구나너굴.", "빗속에서는 서두르지 말고 발밑을 살피자너굴."],
+  snow: ["눈이 내리는 날이구나너굴.", "미끄러운 길에서는 속도보다 균형이 먼저다너굴."],
+  fog: ["안개가 낀 날이구나너굴.", "앞이 흐릴 때는 멀리 뛰기보다 가까운 곳부터 확인하자너굴."],
+  storm: ["천둥과 비바람이 거센 날이구나너굴.", "날씨가 거칠 땐 무리하지 말고 안전을 먼저 챙기자너굴."]
+};
+
+function getSeason(dateKey: string): keyof typeof seasonalMottos {
+  const month = Number(dateKey.slice(5, 7));
+  if (month >= 3 && month <= 5) return "spring";
+  if (month >= 6 && month <= 8) return "summer";
+  if (month >= 9 && month <= 11) return "autumn";
+  return "winter";
+}
+
+function getWeatherCondition(code: number): string {
+  if (code === 0) return "clear";
+  if (code >= 1 && code <= 3) return "cloudy";
+  if (code === 45 || code === 48) return "fog";
+  if (code >= 71 && code <= 77 || code === 85 || code === 86) return "snow";
+  if (code >= 95) return "storm";
+  if (code >= 51 && code <= 67 || code >= 80 && code <= 82) return "rain";
+  return "cloudy";
+}
+
+function getDailyMotto(dateKey: string, weather: WeatherSnapshot | null): [string, string] {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const dayNumber = Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+  const seasonLines = seasonalMottos[getSeason(dateKey)];
+  const seasonLine = seasonLines[dayNumber % seasonLines.length];
+  if (!weather) return ["오늘의 하늘은 어떤 모습일까너굴.", seasonLine];
+
+  const weatherLines = weatherMottos[weather.condition] ?? weatherMottos.cloudy;
+  const temperatureLine = weather.temperature <= 0
+    ? `현재 기온은 ${weather.temperature.toFixed(0)}도, 몸을 따뜻하게 챙기자너굴.`
+    : weather.temperature >= 30
+      ? `현재 기온은 ${weather.temperature.toFixed(0)}도, 더위에 지치지 않게 쉬어가자너굴.`
+      : weather.temperature >= 24
+        ? `현재 기온은 ${weather.temperature.toFixed(0)}도, 수분을 챙기며 움직이자너굴.`
+        : weather.temperature <= 8
+          ? `현재 기온은 ${weather.temperature.toFixed(0)}도, 옷깃을 여미고 천천히 가자너굴.`
+          : `현재 기온은 ${weather.temperature.toFixed(0)}도, 바깥 공기를 느끼기 좋은 날이구나너굴.`;
+  return [weatherLines[dayNumber % weatherLines.length], `${temperatureLine} ${seasonLine}`];
+}
 
 function getKstDateKey() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -298,15 +341,9 @@ function getKstDateKey() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function getDailyMotto(dateKey: string) {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const dayNumber = Math.floor(Date.UTC(year, month - 1, day) / 86400000);
-  const index = ((dayNumber % dailyMottos.length) + dailyMottos.length) % dailyMottos.length;
-  return dailyMottos[index];
-}
-
 function App() {
   const [mottoDate, setMottoDate] = useState(getKstDateKey);
+  const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   useEffect(() => {
     const timer = window.setInterval(() => {
       const today = getKstDateKey();
@@ -314,6 +351,47 @@ function App() {
     }, 60_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadWeather = (latitude: number, longitude: number) => {
+      const url = new URL("https://api.open-meteo.com/v1/forecast");
+      url.search = new URLSearchParams({
+        latitude: String(latitude),
+        longitude: String(longitude),
+        current: "temperature_2m,apparent_temperature,weather_code",
+        timezone: "Asia/Seoul"
+      }).toString();
+      fetch(url.toString())
+        .then(response => {
+          if (!response.ok) throw new Error("Weather request failed");
+          return response.json();
+        })
+        .then(payload => {
+          const current = payload?.current;
+          if (!active || typeof current?.temperature_2m !== "number" || typeof current?.weather_code !== "number") return;
+          const code = current.weather_code as number;
+          setWeather({
+            temperature: current.temperature_2m as number,
+            apparentTemperature: typeof current.apparent_temperature === "number" ? current.apparent_temperature : current.temperature_2m,
+            weatherCode: code,
+            condition: getWeatherCondition(code)
+          });
+        })
+        .catch(() => { if (active) setWeather(null); });
+    };
+
+    if (!navigator.geolocation) {
+      setWeather(null);
+    } else {
+      navigator.geolocation.getCurrentPosition(
+        position => loadWeather(position.coords.latitude, position.coords.longitude),
+        () => { if (active) setWeather(null); },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 6 * 60 * 60 * 1000 }
+      );
+    }
+    return () => { active = false; };
+  }, [mottoDate]);
   const [activePage, setActivePage] = useState<"dashboard" | "stock-analysis" | "history">("dashboard");
   const [historyItems, setHistoryItems] = useState<Array<{analyzed_at:string;ticker:string;name:string;trading_date:string;matched:boolean;baseline_price?:number|null;current_price?:number|null;change_pct?:number|null;weekly?:{grade?:string};trade_plan?:unknown}>>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -543,10 +621,10 @@ function App() {
           <section className="welcome-row">
             <div>
               <div className="eyebrow"><span className="eyebrow-line" /> YOUR PRIVATE MARKET OFFICE</div>
-              <h1>{getDailyMotto(mottoDate)[0]}</h1>
-              <p>{getDailyMotto(mottoDate)[1]}</p>
+              <h1>{getDailyMotto(mottoDate, weather)[0]}</h1>
+              <p>{getDailyMotto(mottoDate, weather)[1]}</p>
             </div>
-            <div className="date-pill"><Clock3 size={14} /> MARKET DESK <span>·</span> KST</div>
+            <div className="date-pill"><Clock3 size={14} /> {weather ? `${weather.temperature.toFixed(0)}°C · 날씨 연동` : "SEASONAL MODE"} <span>·</span> KST</div>
           </section>
 
           <section className="market-grid" aria-label="시장 요약">
