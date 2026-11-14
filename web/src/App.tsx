@@ -745,7 +745,7 @@ function App() {
                     </div>
                     <div className="company-outlook raccoon-outlook">
                       <div className="raccoon-analyst-heading">
-                        <div><span className="raccoon-analyst-kicker">WALL STREET SWING DESK · TOP 10% PERSONA</span><b>너구리의 스윙 투자 의견</b></div>
+                        <div><span className="raccoon-analyst-kicker">WALL STREET SWING DESK · ELITE SWING ANALYST</span><b>너구리의 스윙 투자 의견</b><small className="raccoon-analyst-motto">“시장은 전쟁터다너굴. 수익은 실력으로 쟁취하는 거다너굴.”</small></div>
                         <span className="raccoon-analyst-avatar">🦝</span>
                       </div>
                       {(() => {
@@ -772,6 +772,11 @@ function App() {
                           <p className="raccoon-analyst-comment">“{comment}”</p>
                         </>;
                       })()}
+                      <div className="raccoon-personality">
+                        <b>너구리의 성격</b>
+                        <div><span>호전적</span><span>자신만만</span><span>승부사</span><span>냉철한 리스크 관리</span></div>
+                        <p>기회가 보이면 과감하게 파고들지만, 근거 없는 낙관과 손실 방치는 경멸한다너굴. 시장을 이길 수 있다고 큰소리치되, 틀렸을 땐 손절로 인정하고 다음 기회를 노리는 타입이다너굴.</p>
+                      </div>
                       <div className="raccoon-analyst-signature">너구리 · 월가 상위 10% 스윙 전문 애널리스트</div>
                     </div>
                     <div className="company-disclaimer">너구리의 의견은 DONMULWON의 주봉 등급·기술적 진입 조건·가격 계획을 바탕으로 한 스윙 관점의 규칙 기반 판정입니다. 데이터가 부족하면 관망으로 판단하며 수익을 보장하지 않습니다.{stockAnalysis.company.website ? <> · <a href={stockAnalysis.company.website} target="_blank" rel="noreferrer">회사 홈페이지</a></> : null}</div>
