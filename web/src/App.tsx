@@ -435,7 +435,15 @@ function App() {
       const response = await fetch(apiBase + "/api/system/status", { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.detail || "연결 상태를 확인하지 못했습니다.");
-      setSystemChecks(Array.isArray(payload.checks) ? payload.checks : []);
+      setSystemChecks([
+        ...(Array.isArray(payload.checks) ? payload.checks : []),
+        {
+          id: "krx",
+          label: "국내 시장 데이터",
+          status: bothMarketsReady ? "connected" : "error",
+          detail: bothMarketsReady ? "코스피·코스닥 데이터 수신 완료" : apiStatus,
+        },
+      ]);
       setSystemCheckedAt(payload.checked_at || "");
     } catch (error) {
       setSystemCheckError(error instanceof Error ? error.message : "상태 확인 실패");
