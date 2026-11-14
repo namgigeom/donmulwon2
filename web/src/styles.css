@@ -314,7 +314,7 @@ button { color: inherit; }
 .chart-panel-title { display: flex; justify-content: space-between; align-items: center; padding: 8px 5px 3px; border-top: 1px solid rgba(191,213,196,.1); color: #dce7df; font-size: 11px; }
 .chart-panel-title span { color: #87998e; font-size: 9px; }
 .subchart-title { margin-top: 7px; }
-.technical-svg { display: block; width: 100%; min-width: 100%; overflow: visible; background: #202b25; preserveAspectRatio: none; }
+.technical-svg { display: block; width: 100%; min-width: 100%; overflow: visible; background: #202b25; }
 .price-svg { height: auto; aspect-ratio: 900 / 240; }
 .volume-svg { height: auto; aspect-ratio: 900 / 76; }
 .indicator-svg { height: auto; aspect-ratio: 900 / 120; }
