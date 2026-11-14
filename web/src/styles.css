@@ -463,6 +463,14 @@ button { color: inherit; }
 .raccoon-analyst-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
 .raccoon-analyst-heading > div { display: flex; flex-direction: column; gap: 5px; }
 .raccoon-analyst-heading b { color: #e5eee4; font-size: 15px; }
+
+.raccoon-analyst-motto { color: #b5c5b5; font-size: 10px; line-height: 1.5; }
+.raccoon-personality { margin-top: 13px; padding: 12px; border: 1px solid rgba(151,190,139,.2); border-radius: 6px; background: rgba(0,0,0,.12); }
+.raccoon-personality > b { color: #dce8dc; font-size: 11px; }
+.raccoon-personality > div { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.raccoon-personality > div span { padding: 4px 7px; border: 1px solid rgba(159,189,145,.22); border-radius: 4px; color: #b8d3ae; font-size: 9px; }
+.raccoon-personality p { margin: 9px 0 0; color: #aab9ad; font-size: 10px; line-height: 1.75; }
+
 .raccoon-analyst-kicker { color: #9fbd91; font: 9px var(--mono); letter-spacing: .08em; }
 .raccoon-analyst-avatar { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid rgba(159,189,145,.3); border-radius: 50%; background: rgba(159,189,145,.1); font-size: 21px; }
 .raccoon-analyst-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
