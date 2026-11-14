@@ -83,7 +83,7 @@ KRX_PW=본인_KRX_로그인_비밀번호
 - 업종/테마별 강도, 뉴스 기반 AI 토론·검증, 전략 백테스트는 추가 개발 대상입니다.
 - API 개발 서버는 localhost 전용으로 실행하세요. 인증 없는 API를 공용 인터넷에 노출하지 마세요.
 
-## 친구와 비공개 공유 (최대 2명 사용 권장)
+## 친구에게 링크로 공유 (최대 2명 사용 권장)
 
 공유 기능은 기존 개인용 서버와 분리된 별도 인스턴스로 실행합니다.
 
@@ -91,10 +91,11 @@ KRX_PW=본인_KRX_로그인_비밀번호
 - 공유용 웹사이트/API: `start_donmulwon_share.ps1` (5174 / 8001)
 - 공유용 API는 `DONMULWON_SHARE_MODE=1`로 실행되며 `/api/toss` 및 하위 경로를 서버에서 HTTP 404로 차단합니다.
 - 공유용 웹사이트는 상대 경로 `/api`를 사용하고 Vite 프록시가 공유 API(8001)로 전달합니다.
-- 공유용 포트는 로컬호스트에만 바인딩됩니다. Tailscale Serve가 tailnet 내부 HTTPS 주소로 프록시합니다.
-- Tailscale에 본인 계정과 친구 한 명만 초대하세요. Tailscale Personal 무료 플랜은 최대 6명까지 지원하지만, 이 앱은 본인과 친구 1명만 초대해 사용하도록 구성합니다.
-- 친구도 Tailscale 앱을 설치하고 초대받은 계정으로 로그인해야 접속할 수 있습니다. 공개 인터넷에 사이트를 개방하는 방식이 아닙니다.
-- 이 PC가 켜져 있고 공유 서버와 Tailscale이 실행 중일 때만 접속할 수 있습니다.
+- 공유용 분석 기록은 개인용 `data/donmulwon2.db`와 분리된 `data/donmulwon2_share.db`를 사용합니다.
+- Cloudflare Quick Tunnel이 공개 `trycloudflare.com` 링크를 만듭니다. 친구는 별도 프로그램이나 계정 없이 링크를 브라우저에 입력하면 됩니다.
+- **링크 자체에 로그인/이메일 인증은 없습니다. 링크를 가진 누구나 접속할 수 있으므로 친구에게만 비공개로 전달하세요.**
+- 링크는 터널을 재시작할 때마다 바뀝니다. 이 PC와 공유 서버, cloudflared가 실행 중일 때만 접속할 수 있습니다.
+- Quick Tunnel은 테스트/임시 공유용이며 가동시간 보장이나 고정 주소를 제공하지 않습니다. 최대 200개 동시 진행 요청 제한과 SSE 미지원 제한이 있습니다.
 
 Windows 공유 실행:
 ```powershell
@@ -102,16 +103,9 @@ git pull origin web-rebuild
 powershell -ExecutionPolicy Bypass -File .\start_donmulwon_share.ps1
 ```
 
-공유용 로컬 미리보기는 http://127.0.0.1:5174 입니다. 스크립트가 Tailscale Serve를 자동 설정하지 못하면 Tailscale 로그인 후 아래 명령을 실행하세요.
+스크립트가 필요하면 winget으로 `cloudflared`를 설치하고, 공유용 API(8001)와 웹사이트(5174)를 실행한 뒤 Cloudflare 터널을 시작합니다. 터미널에 출력되는 `https://....trycloudflare.com` 주소를 친구에게 전달하세요. 터널을 중지하려면 실행 중인 PowerShell 창에서 Ctrl+C를 누르세요.
 
-```powershell
-tailscale serve --bg 5174
-tailscale serve status
-```
-
-표시되는 `https://...ts.net` 주소를 친구에게 전달하세요. 공유용 API의 `/api/toss/status`, `/api/toss/accounts`, `/api/toss/holdings`는 404로 차단되며, 기존 개인용 서버(8000)는 별도 로컬 포트로 유지됩니다. 공유용 분석 기록은 개인용 `data/donmulwon2.db`와 분리된 `data/donmulwon2_share.db`를 사용합니다. 따라서 친구에게 기존 개인 분석 기록이 노출되지 않고, 공유 서버에서 만든 기록만 두 사용자가 함께 봅니다.
-
-공유 중에는 PC를 끄거나 절전 모드로 두지 마세요. 공유 기능은 tailnet 구성원만 접근할 수 있으며, Tailscale 사용자 초대는 앱 코드가 아니라 Tailscale 관리자 화면에서 직접 관리합니다.
+공유용 API의 `/api/toss/status`, `/api/toss/accounts`, `/api/toss/holdings`는 404로 차단됩니다. 공유용 분석 기록은 두 사용자가 함께 보며, 기존 개인 분석 기록은 공유하지 않습니다. 공개 링크를 아는 사람이면 누구나 분석 기능을 사용할 수 있으므로 링크를 공개 게시판 등에 올리지 마세요.
 
 ## 기존 데스크톱 앱
 
