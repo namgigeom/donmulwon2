@@ -59,7 +59,7 @@ class DonmulwonAnalyzer:
                 "close": _int(last.get("종가")),
                 "change_pct": change_pct,
                 "volume": _int(last.get("거래량")),
-                "trading_value": _number(last.get("거래대금")) ?? (close is not None and _number(last.get("거래량")) is not None ? close * _number(last.get("거래량")) : None),
+                "trading_value": _number(last.get("거래대금")) if _number(last.get("거래대금")) is not None else (close * _number(last.get("거래량")) if close is not None and _number(last.get("거래량")) is not None else None),
                 "ma10": _number(last.get("MA10")),
                 "ma20": _number(last.get("MA20")),
                 "ma60": _number(last.get("MA60")),
