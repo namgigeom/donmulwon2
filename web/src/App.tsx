@@ -553,7 +553,7 @@ function App() {
                 <div className="desk-lamp"><span /></div>
                 <div className={analystWorking ? "desk-character working" : "desk-character"}>
                   <div className="character-status"><i /> {analystWorking ? "ANALYST WORKING" : scanResult ? "ANALYSIS COMPLETE" : "ANALYST READY"}</div>
-                  <div className="character-placeholder" aria-label="분석 상태에 따라 움직이는 너구리 분석가">🦝<span className="character-work-effect">⌨</span></div>
+                  <div className="character-placeholder" role="img" aria-label="정장을 입고 책상에서 일하는 픽셀 너구리 분석가" />
                   <div className="character-name">너구리 <span>CHIEF ANALYST</span></div>
                   <div className="character-caption">{analystCaption}</div>
                 </div>
