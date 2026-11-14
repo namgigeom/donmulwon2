@@ -4,8 +4,9 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $WebDir = Join-Path $Root "web"
 $VenvPython = Join-Path $Root ".venv\Scripts\python.exe"
 
-Write-Host "=== DONMULWON 2 · PRIVATE SHARE MODE ===" -ForegroundColor Cyan
-Write-Host "Share mode blocks every /api/toss* account endpoint." -ForegroundColor Yellow
+Write-Host "=== DONMULWON 2 · LINK SHARE MODE ===" -ForegroundColor Cyan
+Write-Host "Public link access: anyone who has the URL can open the market-only share app." -ForegroundColor Yellow
+Write-Host "Toss account endpoints remain blocked in the share API." -ForegroundColor Green
 Set-Location $Root
 
 if (-not (Test-Path $VenvPython)) {
@@ -30,6 +31,20 @@ if (-not (Test-Path (Join-Path $WebDir "node_modules"))) {
     if ($NpmExit -ne 0) { throw "Web dependency installation failed." }
 }
 
+if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
+        Write-Host "Installing Cloudflare Tunnel (cloudflared)..."
+        winget install --id Cloudflare.cloudflared -e --accept-package-agreements --accept-source-agreements
+        if ($LASTEXITCODE -ne 0) {
+            throw "cloudflared installation failed. Install it from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/ and rerun this script."
+        }
+        $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+    }
+}
+if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
+    throw "cloudflared was not found. Install it from https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/ and rerun this script."
+}
+
 Write-Host "Starting isolated share API on 127.0.0.1:8001..."
 $ShareDb = Join-Path $Root "data\donmulwon2_share.db"
 $BackendCommand = "`$env:DONMULWON_SHARE_MODE='1'; `$env:DONMULWON_DB_PATH='$ShareDb'; & '$VenvPython' -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8001"
@@ -39,32 +54,15 @@ Write-Host "Starting friend-share website on 127.0.0.1:5174..."
 $FrontendCommand = "npm run dev -- --config vite.share.config.ts"
 Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoExit", "-Command", $FrontendCommand) -WorkingDirectory $WebDir
 
-Start-Sleep -Seconds 5
+Start-Sleep -Seconds 6
 Start-Process "http://127.0.0.1:5174"
 
 Write-Host ""
-Write-Host "Local share preview: http://127.0.0.1:5174" -ForegroundColor Green
-Write-Host "Share API health:    http://127.0.0.1:8001/api/health"
-Write-Host "Toss endpoints in share mode must return HTTP 404."
+Write-Host "Starting Cloudflare Quick Tunnel..." -ForegroundColor Cyan
+Write-Host "A public trycloudflare.com link will appear below." -ForegroundColor Green
+Write-Host "Send that link only to your friend. Anyone who gets the link can access it." -ForegroundColor Yellow
+Write-Host "The link changes whenever this tunnel is restarted." -ForegroundColor Yellow
+Write-Host "Press Ctrl+C here to stop external access."
 Write-Host ""
 
-$Tailscale = Get-Command tailscale -ErrorAction SilentlyContinue
-if ($Tailscale) {
-    Write-Host "Enabling private HTTPS access through Tailscale Serve..."
-    $ServeOutput = & tailscale serve --bg 5174 2>&1
-    $ServeExit = $LASTEXITCODE
-    $ServeOutput | ForEach-Object { Write-Host $_ }
-    if ($ServeExit -eq 0) {
-        Write-Host ""
-        Write-Host "Share the displayed https://...ts.net address only with the invited friend." -ForegroundColor Green
-    } else {
-        Write-Host "Tailscale Serve did not start. Connect Tailscale, then run: tailscale serve --bg 5174" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "Tailscale is not installed or not on PATH." -ForegroundColor Yellow
-    Write-Host "Install Tailscale on this PC and your friend's device, sign in, and invite only that one friend."
-    Write-Host "Then run: tailscale serve --bg 5174"
-}
-
-Write-Host ""
-Write-Host "Keep this PC, the API window, the website window, and Tailscale running."
+& cloudflared tunnel --url http://127.0.0.1:5174
