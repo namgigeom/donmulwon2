@@ -97,6 +97,45 @@ def analyze_stock(ticker: str):
     return _require_success(analyzer.analyze_ticker(ticker))
 
 
+@app.get("/api/stocks/{ticker}/rsi-debug")
+def debug_stock_rsi(ticker: str):
+    """Expose candle provenance and recent RSI inputs for troubleshooting."""
+    if not re.fullmatch(r"\d{6}", ticker):
+        raise HTTPException(status_code=422, detail="ticker must contain exactly six digits")
+
+    analyzer = DonmulwonAnalyzer()
+    history = analyzer.provider.ticker_history(ticker, days=420, use_toss=True)
+    frame = _require_success(history)
+    from .indicators import calculate_indicators
+
+    indicators = calculate_indicators(frame)
+    if indicators.empty:
+        raise HTTPException(status_code=502, detail="RSI 계산용 캔들 데이터가 비어 있습니다.")
+
+    recent = indicators.tail(30)
+    latest = indicators.iloc[-1]
+    return {
+        "ticker": ticker,
+        "source": history.message,
+        "adjusted_prices": True if history.message.startswith("Toss") else None,
+        "bar_count": int(len(frame)),
+        "first_date": frame.index[0].strftime("%Y-%m-%d"),
+        "last_date": frame.index[-1].strftime("%Y-%m-%d"),
+        "latest_close": float(latest["종가"]),
+        "rsi10": float(latest["RSI10"]) if latest.get("RSI10") == latest.get("RSI10") else None,
+        "rsi14": float(latest["RSI14"]) if latest.get("RSI14") == latest.get("RSI14") else None,
+        "recent_bars": [
+            {
+                "date": index.strftime("%Y-%m-%d"),
+                "close": float(row["종가"]),
+                "rsi10": float(row["RSI10"]) if row.get("RSI10") == row.get("RSI10") else None,
+                "rsi14": float(row["RSI14"]) if row.get("RSI14") == row.get("RSI14") else None,
+            }
+            for index, row in recent.iterrows()
+        ],
+    }
+
+
 @app.post("/api/scan/{market}")
 def scan_market(
     market: str,
