@@ -772,7 +772,7 @@ function App() {
                           <p className="raccoon-analyst-comment">“{comment}”</p>
                         </>;
                       })()}
-                      <div className="raccoon-analyst-signature">너구리 · 월가 상위 10%를 자처하는 스윙 전문 애널리스트</div>
+                      <div className="raccoon-analyst-signature">너구리 · 월가 상위 10% 스윙 전문 애널리스트</div>
                     </div>
                     <div className="company-disclaimer">너구리의 의견은 DONMULWON의 주봉 등급·기술적 진입 조건·가격 계획을 바탕으로 한 스윙 관점의 규칙 기반 판정입니다. 데이터가 부족하면 관망으로 판단하며 수익을 보장하지 않습니다.{stockAnalysis.company.website ? <> · <a href={stockAnalysis.company.website} target="_blank" rel="noreferrer">회사 홈페이지</a></> : null}</div>
                   </> : <div className="scanner-state">{stockAnalysis.company?.message || "기업 재무·사업 정보를 제공받지 못했습니다. 시세·기술적 분석은 정상적으로 표시됩니다."}</div>}
