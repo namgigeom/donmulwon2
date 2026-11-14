@@ -99,7 +99,7 @@ KRX_PW=본인_KRX_로그인_비밀번호
 Windows 공유 실행:
 ```powershell
 git pull origin web-rebuild
-powershell -ExecutionPolicy Bypass -File .\\start_donmulwon_share.ps1
+powershell -ExecutionPolicy Bypass -File .\start_donmulwon_share.ps1
 ```
 
 공유용 로컬 미리보기는 http://127.0.0.1:5174 입니다. 스크립트가 Tailscale Serve를 자동 설정하지 못하면 Tailscale 로그인 후 아래 명령을 실행하세요.
