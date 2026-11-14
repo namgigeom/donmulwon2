@@ -109,8 +109,26 @@ def analyze_stock(ticker: str):
     """Analyze one Korean stock by its six-digit ticker."""
     if not re.fullmatch(r"\d{6}", ticker):
         raise HTTPException(status_code=422, detail="ticker must contain exactly six digits")
-    analyzer = DonmulwonAnalyzer()
-    return _require_success(analyzer.analyze_ticker(ticker))
+    # Persist explicitly at the API boundary so a successful UI analysis cannot
+    # silently depend on the analyzer's default save=True argument.
+    from .storage import AnalysisStore
+
+    store = AnalysisStore()
+    analyzer = DonmulwonAnalyzer(store=store)
+    data = _require_success(analyzer.analyze_ticker(ticker, save=False))
+    try:
+        store.save_analysis(
+            ticker,
+            data.get("name") or ticker,
+            data.get("trading_date") or "",
+            data,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"분석은 완료됐지만 기록 저장에 실패했습니다: {exc}",
+        ) from exc
+    return data
 
 
 @app.get("/api/stocks/{ticker}/rsi-debug")
