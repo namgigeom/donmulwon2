@@ -9,6 +9,25 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Simplify the shared workspace chrome and keep the help note available.
+      const cleanShareHeader = () => {
+        document.querySelector(".top-actions .icon-button")?.remove();
+        document.querySelector(".top-actions .user-chip")?.remove();
+        document.querySelectorAll(".sidebar-bottom a.nav-link.muted").forEach((link) => {
+          if (link.textContent.trim() === "설정") link.remove();
+        });
+      };
+      const root = document.getElementById("root");
+      new MutationObserver(cleanShareHeader).observe(root, { childList: true, subtree: true });
+      document.addEventListener("click", (event) => {
+        const link = event.target.closest(".sidebar-bottom a.nav-link.muted");
+        if (link && link.textContent.trim() === "도움말") {
+          event.preventDefault();
+          window.alert("맹신하지말고 적당히 쓸것");
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
