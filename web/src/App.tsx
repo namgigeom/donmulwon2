@@ -88,6 +88,50 @@ function formatCompanyMoney(value: number | null | undefined, currency?: string)
   return new Intl.NumberFormat("ko-KR", { style: "currency", currency: currency || "USD", notation: "compact", maximumFractionDigits: 2 }).format(value);
 }
 
+const companySectorKo: Record<string, string> = {
+  "Communication Services": "커뮤니케이션 서비스",
+  "Technology": "기술",
+  "Healthcare": "헬스케어",
+  "Financial Services": "금융 서비스",
+  "Consumer Cyclical": "경기소비재",
+  "Consumer Defensive": "필수소비재",
+  "Industrials": "산업재",
+  "Basic Materials": "기초소재",
+  "Energy": "에너지",
+  "Utilities": "유틸리티",
+  "Real Estate": "부동산",
+};
+const companyIndustryKo: Record<string, string> = {
+  "Electronic Gaming & Multimedia": "전자 게임 및 멀티미디어",
+  "Software—Application": "응용 소프트웨어",
+  "Software—Infrastructure": "소프트웨어 인프라",
+  "Semiconductors": "반도체",
+  "Consumer Electronics": "가전·전자제품",
+  "Internet Content & Information": "인터넷 콘텐츠 및 정보",
+  "Entertainment": "엔터테인먼트",
+  "Telecom Services": "통신 서비스",
+  "Information Technology Services": "정보기술 서비스",
+  "Aerospace & Defense": "항공우주 및 방위산업",
+  "Auto Manufacturers": "자동차 제조",
+  "Biotechnology": "생명공학",
+  "Drug Manufacturers—General": "종합 제약",
+  "Banks—Regional": "지역은행",
+};
+function translateCompanyCategory(value?: string, kind: "sector" | "industry" = "sector") {
+  if (!value) return "—";
+  const dictionary = kind === "sector" ? companySectorKo : companyIndustryKo;
+  return dictionary[value] || value;
+}
+function translateCompanySummary(value?: string, symbol?: string) {
+  if (!value) return "회사 사업 소개 데이터가 제공되지 않습니다.";
+  const normalized = value.toLowerCase();
+  if ((symbol || "").toUpperCase().includes("052790") ||
+      (normalized.includes("actoz soft") && normalized.includes("game company"))) {
+    return "액토즈소프트는 국내외에서 게임 사업을 운영하는 기업입니다. 다양한 장르의 PC 온라인 게임과 모바일 게임을 개발·서비스하며, e스포츠 사업에도 참여하고 있습니다. 1996년에 설립되었으며 대한민국 서울에 본사를 두고 있습니다. 샨다게임즈의 자회사입니다.";
+  }
+  return value;
+}
+
 function formatCompanyPrice(value: number | null | undefined, currency?: string) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "자료 없음";
   return currency === "KRW"
@@ -172,7 +216,7 @@ function PriceChart({ bars, period }: { bars: Candle[]; period: "daily" | "weekl
       <span className="legend-ma10">{period === "daily" ? "MA10" : "MA10주"}</span>{period === "daily" && <span className="legend-ma240">MA240</span>}<span className="legend-bb">볼린저밴드(10,2)</span>
     </div>
     <div className="chart-panel-title"><b>가격 · OHLC</b><span>{rows.length}개 봉</span></div>
-    <svg className="technical-svg price-svg" viewBox={`0 0 ${width} 240`} role="img" aria-label="이동평균선과 볼린저밴드가 표시된 캔들 차트">
+    <svg className="technical-svg price-svg" viewBox={`0 0 ${width} 240`} preserveAspectRatio="none" role="img" aria-label="이동평균선과 볼린저밴드가 표시된 캔들 차트">
       {[0,1,2,3,4].map(n => <g key={n}><line x1={left} x2={width-right} y1={12+n*54} y2={12+n*54} className="technical-grid"/><text x={left-8} y={16+n*54} textAnchor="end" className="axis-label">{Math.round(pMax-(pMax-pMin)*n/4).toLocaleString("ko-KR")}</text></g>)}
       <path d={linePath("BB_UPPER",priceY)} className="indicator-line bb-line"/>
       <path d={linePath("BB_MIDDLE",priceY)} className="indicator-line bb-mid-line"/>
@@ -189,13 +233,13 @@ function PriceChart({ bars, period }: { bars: Candle[]; period: "daily" | "weekl
     <div className="chart-date-axis"><span>{rows[0].date}</span><span>{rows[Math.floor(rows.length/2)].date}</span><span>{rows[rows.length-1].date}</span></div>
 
     <div className="chart-panel-title subchart-title"><b>거래량</b><span>거래량 막대</span></div>
-    <svg className="technical-svg volume-svg" viewBox={`0 0 ${width} 76`} role="img" aria-label="거래량 차트">
+    <svg className="technical-svg volume-svg" viewBox={`0 0 ${width} 76`} preserveAspectRatio="none" role="img" aria-label="거래량 차트">
       {[0,1,2].map(n=><line key={n} x1={left} x2={width-right} y1={8+n*28} y2={8+n*28} className="technical-grid"/>)}
       {rows.map((bar,i)=>{const volume=numeric(bar["거래량"])??0, up=(numeric(bar["종가"])??0)>=(numeric(bar["시가"])??0), h=volume/volumeMax*60;return <rect key={bar.date} x={xAt(i)-candleWidth/2} y={70-h} width={candleWidth} height={h} className={up?"volume-bar up":"volume-bar down"}/>;})}
     </svg>
 
     <div className="chart-panel-title subchart-title"><b>MACD (5, 10, 9)</b><span>MACD · Signal · Histogram</span></div>
-    <svg className="technical-svg indicator-svg" viewBox={`0 0 ${width} 120`} role="img" aria-label="MACD 보조지표">
+    <svg className="technical-svg indicator-svg" viewBox={`0 0 ${width} 120`} preserveAspectRatio="none" role="img" aria-label="MACD 보조지표">
       <line x1={left} x2={width-right} y1={75} y2={75} className="zero-line"/>
       {rows.map((bar,i)=>{const v=numeric(bar.MACD_HIST)??0, y=macdY(v), zero=macdY(0);return <rect key={bar.date} x={xAt(i)-candleWidth/2} y={Math.min(y,zero)} width={candleWidth} height={Math.max(1,Math.abs(zero-y))} className={v>=0?"macd-positive":"macd-negative"}/>;})}
       <path d={linePath("MACD",macdY)} className="indicator-line macd-line"/>
@@ -203,7 +247,7 @@ function PriceChart({ bars, period }: { bars: Candle[]; period: "daily" | "weekl
     </svg>
 
     <div className="chart-panel-title subchart-title"><b>RSI (10 / 14)</b><span>과매수 70 · 과매도 30</span></div>
-    <svg className="technical-svg indicator-svg rsi-svg" viewBox={`0 0 ${width} 112`} role="img" aria-label="RSI 보조지표">
+    <svg className="technical-svg indicator-svg rsi-svg" viewBox={`0 0 ${width} 112`} preserveAspectRatio="none" role="img" aria-label="RSI 보조지표">
       {[30,50,70].map(v=><g key={v}><line x1={left} x2={width-right} y1={rsiY(v)} y2={rsiY(v)} className={v===50?"zero-line":"threshold-line"}/><text x={left-8} y={rsiY(v)+3} textAnchor="end" className="axis-label">{v}</text></g>)}
       <path d={linePath("RSI14",rsiY)} className="indicator-line rsi14-line"/>
       <path d={linePath("RSI10",rsiY)} className="indicator-line rsi10-line"/>
@@ -677,10 +721,10 @@ function App() {
                 <section className="company-profile-card">
                   <div className="section-heading compact"><div><span className="section-kicker">기업 정보 · 재무 실적</span><h2>종목 정보 · 실적 · 전망</h2></div><span className="company-source">{stockAnalysis.company?.source ?? "기업 데이터"}</span></div>
                   {stockAnalysis.company?.available ? <>
-                    <div className="company-summary">{stockAnalysis.company.summary || "회사 사업 소개 데이터가 제공되지 않습니다."}</div>
+                    <div className="company-summary">{translateCompanySummary(stockAnalysis.company.summary, stockAnalysis.company.symbol)}</div>
                     <div className="company-facts">
-                      <div><small>업종</small><b>{stockAnalysis.company.sector || "—"}</b></div>
-                      <div><small>세부 산업</small><b>{stockAnalysis.company.industry || "—"}</b></div>
+                      <div><small>업종</small><b>{translateCompanyCategory(stockAnalysis.company.sector, "sector")}</b></div>
+                      <div><small>세부 산업</small><b>{translateCompanyCategory(stockAnalysis.company.industry, "industry")}</b></div>
                       <div><small>시가총액</small><b>{formatCompanyMoney(stockAnalysis.company.market_cap, stockAnalysis.company.currency)}</b></div>
                       <div><small>직원 수</small><b>{stockAnalysis.company.employees ? stockAnalysis.company.employees.toLocaleString("ko-KR") + "명" : "—"}</b></div>
                     </div>
