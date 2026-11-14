@@ -91,6 +91,62 @@ def _require_success(result):
     return result.data
 
 
+
+
+@app.get("/api/system/status")
+def system_status():
+    """Run real, read-only dependency checks without exposing credentials."""
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError, URLError
+    from .raccoon_ai import _load_local_env as _load_openrouter_env
+    from .storage import AnalysisStore
+
+    checks = []
+    checks.append({"id": "backend", "label": "Python 분석 서버", "status": "connected", "detail": "상태 조회 요청 정상 처리"})
+
+    try:
+        store = AnalysisStore()
+        with store._connect() as conn:
+            conn.execute("SELECT 1").fetchone()
+        checks.append({"id": "database", "label": "분석 데이터베이스", "status": "connected", "detail": "SQLite 읽기 연결 정상"})
+    except Exception as exc:
+        checks.append({"id": "database", "label": "분석 데이터베이스", "status": "error", "detail": str(exc)[:180]})
+
+    _load_openrouter_env()
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not openrouter_key:
+        checks.append({"id": "openrouter", "label": "OpenRouter AI", "status": "not_configured", "detail": "OPENROUTER_API_KEY 미설정"})
+    else:
+        try:
+            request = Request(
+                "https://openrouter.ai/api/v1/models",
+                headers={"Authorization": f"Bearer {openrouter_key}", "Accept": "application/json"},
+            )
+            with urlopen(request, timeout=7) as response:
+                if response.status == 200:
+                    checks.append({"id": "openrouter", "label": "OpenRouter AI", "status": "connected", "detail": "인증 및 모델 목록 API 응답 정상"})
+                else:
+                    checks.append({"id": "openrouter", "label": "OpenRouter AI", "status": "error", "detail": f"HTTP {response.status}"})
+        except HTTPError as exc:
+            checks.append({"id": "openrouter", "label": "OpenRouter AI", "status": "error", "detail": f"인증/API 오류 · HTTP {exc.code}"})
+        except (URLError, TimeoutError, Exception) as exc:
+            checks.append({"id": "openrouter", "label": "OpenRouter AI", "status": "error", "detail": f"연결 실패 · {str(exc)[:140]}"})
+
+    if _SHARE_MODE:
+        checks.append({"id": "toss", "label": "토스증권 API", "status": "disabled", "detail": "친구 공유 모드에서는 토스 계좌 API 비활성화"})
+    else:
+        client = TossClient()
+        if not client.configured:
+            checks.append({"id": "toss", "label": "토스증권 API", "status": "not_configured", "detail": "TOSS_CLIENT_ID / SECRET 미설정"})
+        else:
+            try:
+                client.access_token()
+                checks.append({"id": "toss", "label": "토스증권 API", "status": "connected", "detail": "OAuth 인증 토큰 발급 성공"})
+            except Exception as exc:
+                checks.append({"id": "toss", "label": "토스증권 API", "status": "error", "detail": str(exc)[:180]})
+
+    return {"checks": checks, "checked_at": datetime.now().isoformat(timespec="seconds"), "share_mode": _SHARE_MODE}
+
 @app.get("/api/health")
 def health():
     return {"ok": True, "service": "donmulwon2-api", "analysis_engine": "python"}
