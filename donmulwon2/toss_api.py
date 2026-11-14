@@ -97,14 +97,25 @@ class TossClient:
         return payload.get("result", payload) if isinstance(payload, dict) else payload
 
     def candles(self, symbol: str, count: int = 420):
-        """Fetch up to count daily candles, paging with nextBefore (API max 200/page)."""
+        """Fetch unique daily candles; Toss before/nextBefore pagination is inclusive."""
         rows = []
+        seen_timestamps = set()
         before = None
+
         while len(rows) < count:
-            params = {"symbol": symbol, "interval": "1d", "count": min(200, count - len(rows)),
-                      "adjusted": "true"}
+            # The next page includes its boundary candle, so request one extra
+            # item to still reach the requested number of unique trading days.
+            remaining = count - len(rows)
+            page_count = min(200, remaining + (1 if before else 0))
+            params = {
+                "symbol": symbol,
+                "interval": "1d",
+                "count": page_count,
+                "adjusted": "true",
+            }
             if before:
                 params["before"] = before
+
             payload = self._result(self._request_json("GET", "/api/v1/candles", params=params))
             if isinstance(payload, list):
                 page, next_before = payload, None
@@ -113,12 +124,25 @@ class TossClient:
                 next_before = payload.get("nextBefore") or payload.get("next_before")
             else:
                 page, next_before = [], None
+
             if not page:
                 break
-            rows.extend(page)
-            if not next_before or len(page) == 0:
+
+            for candle in page:
+                timestamp = candle.get("timestamp") if isinstance(candle, dict) else None
+                # Toss documents timestamp as a required field for every candle.
+                # Keep the newest occurrence when an inclusive page boundary repeats.
+                if timestamp is None or timestamp in seen_timestamps:
+                    continue
+                seen_timestamps.add(timestamp)
+                rows.append(candle)
+                if len(rows) >= count:
+                    break
+
+            if not next_before or next_before == before:
                 break
             before = next_before
+
         return rows[:count]
 
     def stock_info(self, symbol: str):
