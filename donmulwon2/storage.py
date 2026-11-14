@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -10,7 +11,8 @@ from pathlib import Path
 class AnalysisStore:
     def __init__(self, db_path: str | Path | None = None):
         root = Path(__file__).resolve().parent.parent
-        self.db_path = Path(db_path) if db_path else root / "data" / "donmulwon2.db"
+        configured_path = os.getenv("DONMULWON_DB_PATH")
+        self.db_path = Path(db_path) if db_path else Path(configured_path) if configured_path else root / "data" / "donmulwon2.db"
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
