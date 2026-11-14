@@ -522,3 +522,56 @@ button { color: inherit; }
 .raccoon-note-label { margin: 17px 0 7px; color: #8fa993; font: 9px var(--mono); letter-spacing: .08em; }
 .analyst-message { margin-top: 0; }
 
+
+
+/* Collapsible system status panel */
+.checklist-panel.system-status-panel {
+  min-height: 0;
+  align-self: start;
+  padding: 0;
+  overflow: hidden;
+}
+.system-status-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 92px;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 22px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.system-status-toggle:hover { background: rgba(151, 183, 148, .045); }
+.system-status-toggle-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #9ab995;
+}
+.system-status-toggle-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+}
+.system-status-toggle-copy .section-kicker { font-size: 9px; }
+.system-status-toggle-copy b { color: #d6e2d7; font-size: 13px; font-weight: 600; }
+.system-status-toggle-copy small { color: #829288; font-size: 10px; }
+.system-status-chevron {
+  color: #9caf9c;
+  font-size: 22px;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform .18s ease;
+}
+.system-status-chevron.open { transform: rotate(180deg); }
+.system-status-details { padding: 0 22px 18px; }
+.system-status-details .system-row:first-child { border-top: 1px solid var(--line); }
