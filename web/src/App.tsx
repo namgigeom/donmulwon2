@@ -402,7 +402,7 @@ function App() {
   const [stockAnalysis, setStockAnalysis] = useState<StockAnalysis | null>(null);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState("");
-  const apiBase = "http://" + window.location.hostname + ":8000";
+  const apiBase = "";
   const [apiStatus, setApiStatus] = useState("API 연결 확인 중");
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
   const [raccoonNote, setRaccoonNote] = useState<{status:"loading"|"ready"|"error";trading_date?:string;note?:string;model?:string;error?:string}>({status:"loading"});
