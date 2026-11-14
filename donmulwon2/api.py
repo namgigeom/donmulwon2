@@ -112,6 +112,43 @@ def debug_stock_rsi(ticker: str):
     if indicators.empty:
         raise HTTPException(status_code=502, detail="RSI 계산용 캔들 데이터가 비어 있습니다.")
 
+    import pandas as pd
+
+    close = pd.to_numeric(frame["종가"], errors="coerce")
+    delta = close.diff()
+    gains = delta.clip(lower=0)
+    losses = -delta.clip(upper=0)
+
+    def latest_rsi(avg_gain, avg_loss):
+        gain_value, loss_value = avg_gain.iloc[-1], avg_loss.iloc[-1]
+        if pd.isna(gain_value) or pd.isna(loss_value):
+            return None
+        if loss_value == 0:
+            return 50.0 if gain_value == 0 else 100.0
+        return round(float(100 - 100 / (1 + gain_value / loss_value)), 2)
+
+    formula_comparison = {}
+    for period in (10, 14):
+        formula_comparison[str(period)] = {
+            "wilder_sma_seed": round(float(indicators.iloc[-1][f"RSI{period}"]), 2),
+            "ewm_wilder_adjust_false": latest_rsi(
+                gains.ewm(alpha=1 / period, min_periods=period, adjust=False).mean(),
+                losses.ewm(alpha=1 / period, min_periods=period, adjust=False).mean(),
+            ),
+            "ewm_wilder_adjust_true": latest_rsi(
+                gains.ewm(alpha=1 / period, min_periods=period, adjust=True).mean(),
+                losses.ewm(alpha=1 / period, min_periods=period, adjust=True).mean(),
+            ),
+            "simple_rolling_cutler": latest_rsi(
+                gains.rolling(period, min_periods=period).mean(),
+                losses.rolling(period, min_periods=period).mean(),
+            ),
+            "ema_standard": latest_rsi(
+                gains.ewm(span=period, min_periods=period, adjust=False).mean(),
+                losses.ewm(span=period, min_periods=period, adjust=False).mean(),
+            ),
+        }
+
     recent = indicators.tail(30)
     latest = indicators.iloc[-1]
     return {
@@ -124,6 +161,7 @@ def debug_stock_rsi(ticker: str):
         "latest_close": float(latest["종가"]),
         "rsi10": float(latest["RSI10"]) if latest.get("RSI10") == latest.get("RSI10") else None,
         "rsi14": float(latest["RSI14"]) if latest.get("RSI14") == latest.get("RSI14") else None,
+        "formula_comparison": formula_comparison,
         "recent_bars": [
             {
                 "date": index.strftime("%Y-%m-%d"),
