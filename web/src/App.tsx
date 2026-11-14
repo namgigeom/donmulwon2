@@ -442,8 +442,8 @@ function App() {
           <section className="welcome-row">
             <div>
               <div className="eyebrow"><span className="eyebrow-line" /> YOUR PRIVATE MARKET OFFICE</div>
-              <h1>좋은 매매는 <em>기다림</em>에서 시작됩니다.</h1>
-              <p>시장 흐름을 확인하고, 조건을 만족하는 종목을 찾아보세요.</p>
+              <h1>급하게 덤비면 시장에 잡아먹히는 거다너굴.</h1>
+              <p>좋은 기회는 기다릴 줄 아는 녀석에게 찾아오는 법이지너굴.</p>
             </div>
             <div className="date-pill"><Clock3 size={14} /> MARKET DESK <span>·</span> KST</div>
           </section>
@@ -675,7 +675,7 @@ function App() {
                   <div className="stock-last-price"><b>{stockAnalysis.latest?.close?.toLocaleString("ko-KR") ?? "—"}원</b><small>전일 대비 {typeof stockAnalysis.latest?.change_pct === "number" ? (stockAnalysis.latest.change_pct > 0 ? "+" : "") + stockAnalysis.latest.change_pct.toFixed(2) + "%" : "—"}</small></div></div>
                 <div className="stock-large-chart"><PriceChart bars={activeBars} period={chartPeriod}/></div>
                 <section className="company-profile-card">
-                  <div className="section-heading compact"><div><span className="section-kicker">COMPANY & FUNDAMENTALS</span><h2>기업 개요 · 실적 · 전망</h2></div><span className="company-source">{stockAnalysis.company?.source ?? "기업 데이터"}</span></div>
+                  <div className="section-heading compact"><div><span className="section-kicker">기업 정보 · 재무 실적</span><h2>종목 정보 · 실적 · 전망</h2></div><span className="company-source">{stockAnalysis.company?.source ?? "기업 데이터"}</span></div>
                   {stockAnalysis.company?.available ? <>
                     <div className="company-summary">{stockAnalysis.company.summary || "회사 사업 소개 데이터가 제공되지 않습니다."}</div>
                     <div className="company-facts">
