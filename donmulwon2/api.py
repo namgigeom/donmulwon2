@@ -1,6 +1,7 @@
 """FastAPI bridge exposing the existing DONMULWON analysis engine to the web UI."""
 from __future__ import annotations
 
+import os
 import re
 import threading
 import uuid
@@ -9,6 +10,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .analyzer import DonmulwonAnalyzer
 from .toss_api import TossApiError, TossClient
@@ -60,6 +62,20 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+_SHARE_MODE = os.getenv("DONMULWON_SHARE_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+@app.middleware("http")
+async def block_toss_account_routes_in_share_mode(request, call_next):
+    """Never expose personal Toss account endpoints from the friend-share instance."""
+    if _SHARE_MODE and request.url.path.startswith("/api/toss"):
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "이 공유 서버에서는 토스 계좌 기능을 사용할 수 없습니다."},
+        )
+    return await call_next(request)
 
 
 def _market_name(market: str) -> str:
