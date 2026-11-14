@@ -109,7 +109,7 @@ tailscale serve --bg 5174
 tailscale serve status
 ```
 
-표시되는 `https://...ts.net` 주소를 친구에게 전달하세요. 공유용 API의 `/api/toss/status`, `/api/toss/accounts`, `/api/toss/holdings`는 404로 차단되며, 기존 개인용 서버(8000)는 별도 로컬 포트로 유지됩니다. 공유용 분석 기록은 두 사용자가 함께 보는 SQLite 기록을 사용합니다.
+표시되는 `https://...ts.net` 주소를 친구에게 전달하세요. 공유용 API의 `/api/toss/status`, `/api/toss/accounts`, `/api/toss/holdings`는 404로 차단되며, 기존 개인용 서버(8000)는 별도 로컬 포트로 유지됩니다. 공유용 분석 기록은 개인용 `data/donmulwon2.db`와 분리된 `data/donmulwon2_share.db`를 사용합니다. 따라서 친구에게 기존 개인 분석 기록이 노출되지 않고, 공유 서버에서 만든 기록만 두 사용자가 함께 봅니다.
 
 공유 중에는 PC를 끄거나 절전 모드로 두지 마세요. 공유 기능은 tailnet 구성원만 접근할 수 있으며, Tailscale 사용자 초대는 앱 코드가 아니라 Tailscale 관리자 화면에서 직접 관리합니다.
 
