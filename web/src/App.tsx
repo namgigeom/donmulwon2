@@ -61,8 +61,8 @@ type Candle = {
   RSI10?: number | null; RSI14?: number | null;
 };
 type CompanyProfile = { available:boolean; source?:string; symbol?:string; currency?:string; sector?:string; industry?:string; country?:string; website?:string; employees?:number|null; market_cap?:number|null; summary?:string; annual?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null;revenue_growth_pct?:number|null}|null; quarterly?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null}|null; outlook?:{rating?:string|null;target_mean_price?:number|null;target_upside_pct?:number|null;analyst_count?:number|null}|null; message?:string };
-type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{grade?:string;grade_score?:number;grade_reason?:string;trend?:string}; latest?:{close?:number;change_pct?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
-type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
+type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{grade?:string;grade_score?:number;grade_reason?:string;trend?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
+type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
 type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
@@ -752,7 +752,8 @@ function App() {
               <div className="signal-row"><span className="signal-index">01</span><span><b>RSI 골든크로스</b><small>RSI(10) ↑ RSI(14) · 동반 상승</small></span><span className="signal-pending">대기</span></div>
               <div className="signal-row"><span className="signal-index">02</span><span><b>MACD 골든크로스</b><small>MACD(5/10/9) · 상승 확인</small></span><span className="signal-pending">대기</span></div>
               <div className="signal-row"><span className="signal-index">03</span><span><b>MA10 상향 돌파</b><small>종가 기준 돌파 확인</small></span><span className="signal-pending">대기</span></div>
-              <div className="strategy-note"><Sparkles size={14} /> 세 가지 조건을 모두 충족해야 발굴 후보가 됩니다.</div>
+              <div className="signal-row"><span className="signal-index">04</span><span><b>당일 거래대금</b><small>5,000,000원 이상</small></span><span className="signal-pending">필수</span></div>
+              <div className="strategy-note"><Sparkles size={14} /> 네 가지 조건과 240일선 필터를 모두 충족해야 발굴 후보가 됩니다.</div>
             </article>
 
           </section>
@@ -778,13 +779,13 @@ function App() {
             {scanResult && <div className="scanner-table-wrap">
               {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다.</div> :
               <table className="scanner-table">
-                <thead><tr><th>등급</th><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 필터</th><th></th></tr></thead>
+                <thead><tr><th>등급</th><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>당일 거래대금</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 필터</th><th></th></tr></thead>
                 <tbody>{(["A", "B", "C"] as const).map((grade) => {
                   const group = scanResult.matches.filter((item) => (item.weekly?.grade ?? "C") === grade);
                   if (group.length === 0) return null;
                   const groupTitle = grade === "A" ? "매수 매우 추천" : grade === "B" ? "매수 추천" : "매수 보류";
                   return <Fragment key={grade}>
-                    <tr className={`grade-divider grade-divider-${grade.toLowerCase()}`}><td colSpan={10}><b>{grade}등급 · {groupTitle}</b><span>{group.length}종목</span></td></tr>
+                    <tr className={`grade-divider grade-divider-${grade.toLowerCase()}`}><td colSpan={11}><b>{grade}등급 · {groupTitle}</b><span>{group.length}종목</span></td></tr>
                     {group.map((item) => {
                       const below240 = typeof item.latest?.ma240 === "number" && typeof item.latest?.close === "number" && item.latest.close < item.latest.ma240;
                       return <tr key={item.ticker}>
@@ -793,6 +794,7 @@ function App() {
                         <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}</td>
                         <td>{item.signal?.rsi10?.toFixed(1) ?? "—"} / {item.signal?.rsi14?.toFixed(1) ?? "—"}</td>
                         <td>{typeof item.latest?.volume_ratio === "number" ? item.latest.volume_ratio.toFixed(2) + "x" : "—"}</td>
+                        <td>{typeof item.latest?.trading_value === "number" ? Math.round(item.latest.trading_value).toLocaleString("ko-KR") + "원" : "자료 없음"}</td>
                         <td title={item.weekly?.grade_reason}>{item.weekly?.ready ? item.weekly.trend : "데이터 부족"}</td>
                         <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ ${Math.round(item.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}` : "산출 불가"}</td>
                         <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")} / ${Math.round(item.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}` : "—"}</td>
