@@ -458,6 +458,23 @@ button { color: inherit; }
 .company-facts small, .company-financial-grid small { color: var(--muted); font-size: 10px; }
 .company-facts b, .company-financial-grid b { color: #e0e9e1; font-size: 12px; overflow-wrap: anywhere; }
 .company-financials, .company-outlook { margin-top: 17px; }
+
+.raccoon-outlook { padding: 16px; border: 1px solid rgba(151,190,139,.28); border-radius: 8px; background: linear-gradient(135deg, rgba(126,164,112,.09), rgba(255,255,255,.012)); }
+.raccoon-analyst-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.raccoon-analyst-heading > div { display: flex; flex-direction: column; gap: 5px; }
+.raccoon-analyst-heading b { color: #e5eee4; font-size: 15px; }
+.raccoon-analyst-kicker { color: #9fbd91; font: 9px var(--mono); letter-spacing: .08em; }
+.raccoon-analyst-avatar { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid rgba(159,189,145,.3); border-radius: 50%; background: rgba(159,189,145,.1); font-size: 21px; }
+.raccoon-analyst-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+.raccoon-analyst-grid > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 6px; background: rgba(0,0,0,.12); }
+.raccoon-analyst-grid small { color: var(--muted); font-size: 10px; }
+.raccoon-analyst-grid b { color: #e0e9e1; font-size: 13px; overflow-wrap: anywhere; }
+.raccoon-analyst-grid b.positive { color: #9ed69e; }
+.raccoon-analyst-grid b.caution { color: #e4c17e; }
+.raccoon-analyst-grid b.negative { color: #d58b83; }
+.raccoon-analyst-comment { margin: 13px 0 9px; padding: 12px 13px; border-left: 2px solid #9fbd91; background: rgba(0,0,0,.14); color: #d8e3d8; font-size: 12px; line-height: 1.8; }
+.raccoon-analyst-signature { color: #91a395; text-align: right; font-size: 9px; }
+
 .company-subheading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 9px; color: #cbd8ce; font-size: 11px; }
 .company-subheading span { color: var(--muted); font: 9px var(--mono); }
 .company-financial-grid + .company-subheading { margin-top: 16px; }
