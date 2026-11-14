@@ -59,6 +59,7 @@ class DonmulwonAnalyzer:
                 "close": _int(last.get("종가")),
                 "change_pct": change_pct,
                 "volume": _int(last.get("거래량")),
+                "trading_value": _number(last.get("거래대금")) ?? (close is not None and _number(last.get("거래량")) is not None ? close * _number(last.get("거래량")) : None),
                 "ma10": _number(last.get("MA10")),
                 "ma20": _number(last.get("MA20")),
                 "ma60": _number(last.get("MA60")),
@@ -159,14 +160,20 @@ class DonmulwonAnalyzer:
                 if result.ok and result.data["matched"]:
                     latest = result.data.get("latest", {})
                     close, ma240 = latest.get("close"), latest.get("ma240")
+                    trading_value = latest.get("trading_value")
                     if ma240 is None or close is None:
                         errors.append({
                             "ticker": ticker,
                             "error": "종가 또는 MA240 데이터가 없어 240일선 필터 판정 불가",
                         })
-                    elif close >= ma240:
+                    elif trading_value is None:
+                        errors.append({
+                            "ticker": ticker,
+                            "error": "당일 거래대금 데이터가 없어 500만원 필터 판정 불가",
+                        })
+                    elif close >= ma240 and trading_value >= 5_000_000:
                         matches.append(result.data)
-                    # 종가가 MA240 아래면 후보에 포함하지 않는다.
+                    # 240일선 아래 또는 당일 거래대금 500만원 미만이면 후보에서 제외한다.
                 elif not result.ok:
                     errors.append({"ticker": ticker, "error": result.message})
                 if progress:
