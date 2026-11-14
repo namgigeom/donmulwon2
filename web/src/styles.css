@@ -521,3 +521,8 @@ button { color: inherit; }
 
 .raccoon-note-label { margin: 17px 0 7px; color: #8fa993; font: 9px var(--mono); letter-spacing: .08em; }
 .analyst-message { margin-top: 0; }
+
+/* Cross-fade when the analyst switches between resting and working poses. */
+.desk-character .character-placeholder { animation: raccoon-pose-in .22s ease-out both; }
+@keyframes raccoon-pose-in { from { opacity: .35; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .desk-character .character-placeholder { animation: none; } }
