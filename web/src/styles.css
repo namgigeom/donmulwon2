@@ -122,8 +122,8 @@ button { color: inherit; }
 .desk-character { position: absolute; z-index: 4; left: 50%; bottom: 43px; display: flex; flex-direction: column; align-items: center; transform: translateX(-50%); }
 .character-status { margin-bottom: 2px; padding: 4px 7px; border: 1px solid rgba(186,215,169,.2); border-radius: 3px; color: #b9d2ae; background: #26392e; font: 6px var(--mono); letter-spacing: .6px; white-space: nowrap; }
 .character-status i { display: inline-block; width: 4px; height: 4px; margin-right: 4px; border-radius: 50%; background: #a7d69a; }
-.character-placeholder { width: 170px; height: 76px; display: block; background-image: url("./assets/raccoon-sprite-transparent.svg"); background-repeat: no-repeat; background-size: 400% 500%; background-position: 33.333% 100%; image-rendering: pixelated; filter: drop-shadow(0 5px 3px rgba(0,0,0,.28)); }
-.desk-character.working .character-placeholder { background-position: 0 25%; }
+.character-placeholder { width: 170px; height: 76px; display: block; background-image: url("./assets/raccoon-idle.svg"); background-repeat: no-repeat; background-size: 100% 100%; background-position: center; image-rendering: pixelated; filter: drop-shadow(0 5px 3px rgba(0,0,0,.28)); }
+.desk-character.working .character-placeholder { background-image: url("./assets/raccoon-working.svg"); }
 .character-name { margin-top: -1px; color: #edf2e8; font-size: 11px; font-weight: 700; text-shadow: 0 1px 4px #17221b; }.character-name span { margin-left: 4px; color: #9fb49e; font: 6px var(--mono); }
 .character-caption { margin-top: 3px; color: #9eafa0; font-size: 8px; white-space: nowrap; }
 .scene-footer { position: absolute; bottom: 13px; left: 18px; right: 18px; display: flex; justify-content: space-between; color: #72867a; font: 7px var(--mono); letter-spacing: .5px; }.scene-footer span:last-child { font-family: "Noto Sans KR", sans-serif; letter-spacing: 0; }
