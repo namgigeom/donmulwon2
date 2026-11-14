@@ -31,7 +31,8 @@ if (-not (Test-Path (Join-Path $WebDir "node_modules"))) {
 }
 
 Write-Host "Starting isolated share API on 127.0.0.1:8001..."
-$BackendCommand = "`$env:DONMULWON_SHARE_MODE='1'; & '$VenvPython' -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8001"
+$ShareDb = Join-Path $Root "data\donmulwon2_share.db"
+$BackendCommand = "`$env:DONMULWON_SHARE_MODE='1'; `$env:DONMULWON_DB_PATH='$ShareDb'; & '$VenvPython' -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8001"
 Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoExit", "-Command", $BackendCommand) -WorkingDirectory $Root
 
 Write-Host "Starting friend-share website on 127.0.0.1:5174..."
