@@ -57,14 +57,16 @@ try {
   $out=Join-Path $Log "cloudflared.stdout.log"
   $err=Join-Path $Log "cloudflared.stderr.log"
   Remove-Item $out,$err -Force -ErrorAction SilentlyContinue
-  $py=Q $Py; $root=Q $Root; $web=Q $WebDir; $db=Q (Join-Path $Data "donmulwon2_share.db")
+  # PowerShell 변수는 대소문자를 구분하지 않는다. $root/$py/$web처럼
+  # 기존 $Root/$Py/$WebDir와 충돌하는 이름을 쓰지 않는다.
+  $pyQ=Q $Py; $rootQ=Q $Root; $webQ=Q $WebDir; $dbQ=Q (Join-Path $Data "donmulwon2_share.db")
   Write-Host "[1/4] 개인 사이트 시작" -ForegroundColor Yellow
-  Start-Hidden "개인 API" "Set-Location $root; & $py -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8000"
-  Start-Hidden "개인 웹" "Set-Location $web; npm run dev -- --host 127.0.0.1 --strictPort"
+  Start-Hidden "개인 API" "Set-Location $rootQ; & $pyQ -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8000"
+  Start-Hidden "개인 웹" "Set-Location $webQ; npm run dev -- --host 127.0.0.1 --strictPort"
   Write-Host "[2/4] 친구 공유 사이트 시작" -ForegroundColor Yellow
-  $shareCmd='$env:DONMULWON_SHARE_MODE=''1''; $env:DONMULWON_DB_PATH='+$db+'; Set-Location '+$root+'; & '+$py+' -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8001'
+  $shareCmd='$env:DONMULWON_SHARE_MODE=''1''; $env:DONMULWON_DB_PATH='+$dbQ+'; Set-Location '+$rootQ+'; & '+$pyQ+' -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8001'
   Start-Hidden "공유 API" $shareCmd
-  Start-Hidden "공유 웹" "Set-Location $web; npm run dev -- --config vite.share.config.ts"
+  Start-Hidden "공유 웹" "Set-Location $webQ; npm run dev -- --config vite.share.config.ts"
   Write-Host "[3/4] 로컬 서버 확인" -ForegroundColor Yellow
   $ready=$false
   for($i=0;$i -lt 45;$i++){
