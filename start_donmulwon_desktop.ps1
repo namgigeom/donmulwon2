@@ -171,4 +171,5 @@ try {
   Write-Host "종료 완료." -ForegroundColor Green
   Start-Sleep 1
 }
-exit
+# Force the launcher PowerShell process to terminate even if the shortcut host was started with -NoExit.
+[Environment]::Exit(0)
