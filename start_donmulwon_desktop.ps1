@@ -100,19 +100,20 @@ try {
   if(!$url){throw "공개 주소를 받지 못했습니다. logs/cloudflared.*.log를 확인하세요."}
   # Use an isolated browser profile so shutdown closes only this DONMULWON window.
   $programFilesX86 = [Environment]::GetFolderPath("ProgramFilesX86")
+  # Prefer Google Chrome; use Edge only when Chrome is not installed.
   $browserCandidates = @(
-    (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe"),
-    (Join-Path $programFilesX86 "Microsoft\Edge\Application\msedge.exe"),
-    (Join-Path $env:LOCALAPPDATA "Microsoft\Edge\Application\msedge.exe"),
     (Join-Path $env:ProgramFiles "Google\Chrome\Application\chrome.exe"),
     (Join-Path $programFilesX86 "Google\Chrome\Application\chrome.exe"),
-    (Join-Path $env:LOCALAPPDATA "Google\Chrome\Application\chrome.exe")
+    (Join-Path $env:LOCALAPPDATA "Google\Chrome\Application\chrome.exe"),
+    (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe"),
+    (Join-Path $programFilesX86 "Microsoft\Edge\Application\msedge.exe"),
+    (Join-Path $env:LOCALAPPDATA "Microsoft\Edge\Application\msedge.exe")
   )
   $browser = $browserCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
   if(!$browser){
-    $edgeCommand=Get-Command msedge.exe -ErrorAction SilentlyContinue
     $chromeCommand=Get-Command chrome.exe -ErrorAction SilentlyContinue
-    if($edgeCommand){$browser=$edgeCommand.Source}elseif($chromeCommand){$browser=$chromeCommand.Source}
+    $edgeCommand=Get-Command msedge.exe -ErrorAction SilentlyContinue
+    if($chromeCommand){$browser=$chromeCommand.Source}elseif($edgeCommand){$browser=$edgeCommand.Source}
   }
   if(!$browser){throw "Microsoft Edge 또는 Google Chrome을 찾을 수 없습니다. 브라우저 설치 후 다시 실행하세요."}
   New-Item -ItemType Directory -Force -Path $BrowserProfile | Out-Null
