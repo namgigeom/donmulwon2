@@ -10,7 +10,7 @@ if (-not (Test-Path $PngIcon)) {
 }
 
 Add-Type -AssemblyName System.Drawing
-$bitmap = New-Object System.Drawing.Bitmap($PngIcon)
+$bitmap = [System.Drawing.Bitmap]::FromFile($PngIcon)
 try {
     $iconHandle = $bitmap.GetHicon()
     try {
