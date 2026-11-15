@@ -15,8 +15,25 @@ function Start-Hidden([string]$Name,[string]$Command) {
   $script:Started += [pscustomobject]@{Name=$Name;Id=$p.Id}
   Write-Host "$Name 시작" -ForegroundColor DarkGray
 }
+function Close-DonmulwonTab {
+  # Close only the active browser tab when its window title identifies DONMULWON.
+  # Never terminate the browser process or touch unrelated tabs.
+  try {
+    $shell = New-Object -ComObject WScript.Shell
+    $activated = $shell.AppActivate("돈물원 2 | DONMULWON")
+    if ($activated) {
+      Start-Sleep -Milliseconds 300
+      $shell.SendKeys("^w")
+      Start-Sleep -Milliseconds 300
+    } else {
+      Write-Host "돈물원 탭을 찾지 못해 브라우저는 그대로 둡니다." -ForegroundColor DarkYellow
+    }
+  } catch {
+    Write-Host "돈물원 탭 자동 닫기 실패: $($_.Exception.Message)" -ForegroundColor DarkYellow
+  }
+}
 function Stop-All {
-  # Leave the user's normal Chrome/Edge window and tabs untouched.
+  Close-DonmulwonTab
   foreach($item in @($script:Started)) { try { taskkill.exe /PID $item.Id /T /F 2>$null | Out-Null } catch {} }
 }
 try {
