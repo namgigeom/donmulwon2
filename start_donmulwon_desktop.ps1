@@ -16,15 +16,24 @@ function Start-Hidden([string]$Name,[string]$Command) {
   Write-Host "$Name 시작" -ForegroundColor DarkGray
 }
 function Close-DonmulwonTab {
-  # Close only the active browser tab when its window title identifies DONMULWON.
-  # Never terminate the browser process or touch unrelated tabs.
+  # Locate the Chrome/Edge window by its actual page title, activate that exact
+  # browser process, then close its current DONMULWON tab (not the whole browser).
   try {
-    $shell = New-Object -ComObject WScript.Shell
-    $activated = $shell.AppActivate("돈물원 2 | DONMULWON")
-    if ($activated) {
-      Start-Sleep -Milliseconds 300
+    Start-Sleep -Milliseconds 1200
+    $browserWindow = Get-Process chrome,msedge -ErrorAction SilentlyContinue |
+      Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -like "*돈물원 2*DONMULWON*" } |
+      Select-Object -First 1
+    if (-not $browserWindow) {
+      $browserWindow = Get-Process chrome,msedge -ErrorAction SilentlyContinue |
+        Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -like "*돈물원 2*" } |
+        Select-Object -First 1
+    }
+    if ($browserWindow) {
+      $shell = New-Object -ComObject WScript.Shell
+      [void]$shell.AppActivate([int]$browserWindow.Id)
+      Start-Sleep -Milliseconds 500
       $shell.SendKeys("^w")
-      Start-Sleep -Milliseconds 300
+      Start-Sleep -Milliseconds 500
     } else {
       Write-Host "돈물원 탭을 찾지 못해 브라우저는 그대로 둡니다." -ForegroundColor DarkYellow
     }
