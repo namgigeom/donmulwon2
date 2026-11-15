@@ -753,7 +753,8 @@ function App() {
               <div className="signal-row"><span className="signal-index">02</span><span><b>MACD 골든크로스</b><small>MACD(5/10/9) · 상승 확인</small></span><span className="signal-pending">대기</span></div>
               <div className="signal-row"><span className="signal-index">03</span><span><b>MA10 상향 돌파</b><small>종가 기준 돌파 확인</small></span><span className="signal-pending">대기</span></div>
               <div className="signal-row"><span className="signal-index">04</span><span><b>당일 거래대금</b><small>5,000,000원 이상</small></span><span className="signal-pending">필수</span></div>
-              <div className="strategy-note"><Sparkles size={14} /> 네 가지 조건과 240일선 필터를 모두 충족해야 발굴 후보가 됩니다.</div>
+              <div className="signal-row"><span className="signal-index">05</span><span><b>주봉 종가가 주봉 MA10 위</b><small>완료된 주봉 기준 상승 추세 확인</small></span><span className="signal-pending">필수</span></div>
+              <div className="strategy-note"><Sparkles size={14} /> 다섯 가지 조건과 240일선 필터를 모두 충족해야 발굴 후보가 됩니다.</div>
             </article>
 
           </section>
@@ -764,7 +765,7 @@ function App() {
               <div><span className="section-kicker">RULE-BASED DISCOVERY</span><h2>시장 스캐너</h2></div>
               <span className="single-agent">DAILY SIGNAL · CLOSE CONFIRMED</span>
             </div>
-            <p className="scanner-intro">일봉 필수 조건과 240일선 필터를 통과한 종목을 주봉 추세로 A·B·C 등급화합니다. A부터 C 순서로 정렬하며 주봉이 약한 종목도 C등급으로 확인할 수 있습니다.</p>
+            <p className="scanner-intro">일봉 필수 조건, 240일선 필터, 주봉 종가의 주봉 MA10 상회 조건을 모두 통과한 종목만 표시합니다. 통과 종목은 주봉 추세 점수로 A·B·C 등급화해 A부터 정렬합니다.</p>
             <div className="scanner-toolbar">
               <div className="period-toggle">
                 <button type="button" className={scanMarket === "ALL" ? "selected" : ""} onClick={() => setScanMarket("ALL")}>전체 시장</button>
