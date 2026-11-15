@@ -15,41 +15,8 @@ function Start-Hidden([string]$Name,[string]$Command) {
   $script:Started += [pscustomobject]@{Name=$Name;Id=$p.Id}
   Write-Host "$Name 시작" -ForegroundColor DarkGray
 }
-function Close-DonmulwonBrowserWindow {
-  # Close only the app-style window titled with the DONMULWON page title.
-  # Do not terminate Chrome/Edge processes: the user's other browser windows stay open.
-  try {
-    $source = @"
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-public static class DonmulwonWindowCloser {
-  public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
-  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
-  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
-  public static void CloseMatching(string fragment) {
-    EnumWindows(delegate(IntPtr hWnd, IntPtr lParam) {
-      if (IsWindowVisible(hWnd)) {
-        StringBuilder title = new StringBuilder(512);
-        GetWindowText(hWnd, title, title.Capacity);
-        if (title.ToString().IndexOf(fragment, StringComparison.OrdinalIgnoreCase) >= 0)
-          PostMessage(hWnd, 0x0010, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE
-      }
-      return true;
-    }, IntPtr.Zero);
-  }
-}
-"@
-    if (-not ("DonmulwonWindowCloser" -as [type])) { Add-Type -TypeDefinition $source }
-    [DonmulwonWindowCloser]::CloseMatching("돈물원 2 | DONMULWON")
-  } catch {
-    Write-Host "돈물원 브라우저 창 자동 닫기 실패: $($_.Exception.Message)" -ForegroundColor DarkYellow
-  }
-}
 function Stop-All {
-  Close-DonmulwonBrowserWindow
+  # Leave the user's normal Chrome/Edge window and tabs untouched.
   foreach($item in @($script:Started)) { try { taskkill.exe /PID $item.Id /T /F 2>$null | Out-Null } catch {} }
 }
 try {
@@ -133,8 +100,7 @@ try {
   if(!$url){throw "공개 주소를 받지 못했습니다. logs/cloudflared.*.log를 확인하세요."}
   # Use an isolated browser profile so shutdown closes only this DONMULWON window.
   $programFilesX86 = [Environment]::GetFolderPath("ProgramFilesX86")
-  # Open DONMULWON as an app-style window using the user's normal browser profile.
-  # This keeps existing Chrome tabs/profile available while giving shutdown a separate window to close.
+  # Open the local site as a normal tab in the user's existing browser window.
   $programFilesX86 = [Environment]::GetFolderPath("ProgramFilesX86")
   $browserCandidates = @(
     (Join-Path $env:ProgramFiles "Google\Chrome\Application\chrome.exe"),
@@ -151,8 +117,7 @@ try {
     if($chromeCommand){$browser=$chromeCommand.Source}elseif($edgeCommand){$browser=$edgeCommand.Source}
   }
   if(!$browser){throw "Google Chrome 또는 Microsoft Edge를 찾을 수 없습니다. 브라우저 설치 후 다시 실행하세요."}
-  $browserArgs = '--app=http://127.0.0.1:5173 --no-first-run --no-default-browser-check'
-  Start-Process -FilePath $browser -ArgumentList $browserArgs | Out-Null
+  Start-Process -FilePath $browser -ArgumentList "http://127.0.0.1:5173" | Out-Null
   try{Set-Clipboard $url}catch{}
   Write-Host ""
   Write-Host "내 사이트: http://127.0.0.1:5173" -ForegroundColor Cyan
