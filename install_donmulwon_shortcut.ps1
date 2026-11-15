@@ -25,16 +25,17 @@ try {
 }
 
 $Desktop = [Environment]::GetFolderPath("Desktop")
-$ShortcutPath = Join-Path $Desktop "돈물원2.lnk"
+$ShortcutName = ([char]0xB3C8).ToString() + ([char]0xBB3C) + ([char]0xC6D0) + "2.lnk"
+$ShortcutPath = Join-Path $Desktop $ShortcutName
 $PowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
 $WshShell = New-Object -ComObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
 $Shortcut.TargetPath = $PowerShell
 $Shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $Launcher + '"'
 $Shortcut.WorkingDirectory = $Root
-$Shortcut.Description = "돈물원2 개인 사이트 및 친구 공유 링크 실행"
+$Shortcut.Description = "DONMULWON2 personal site and friend sharing launcher"
 $Shortcut.IconLocation = "$IcoIcon,0"
 $Shortcut.WindowStyle = 1
 $Shortcut.Save()
-Write-Host "돈물원2 너구리 아이콘 바로가기를 업데이트했습니다." -ForegroundColor Green
+Write-Host "DONMULWON2 desktop shortcut updated." -ForegroundColor Green
 Write-Host "아이콘 파일: $IcoIcon"
