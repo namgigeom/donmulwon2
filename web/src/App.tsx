@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 
+declare const __DONMULWON_SHARE_MODE__: boolean;
+
 import {
   Activity,
   ArrowDownRight,
@@ -14,6 +16,7 @@ import {
   Database,
   LayoutDashboard,
   Search,
+  Power,
   Flame,
   ShieldAlert,
   Settings2,
@@ -392,6 +395,7 @@ function App() {
     return () => { active = false; };
   }, [mottoDate]);
   const [activePage, setActivePage] = useState<"dashboard" | "market-analysis" | "stock-analysis" | "history">("dashboard");
+  const [shutdownPending, setShutdownPending] = useState(false);
   const [historyItems, setHistoryItems] = useState<Array<{analyzed_at:string;ticker:string;name:string;trading_date:string;matched:boolean;baseline_price?:number|null;current_price?:number|null;change_pct?:number|null;weekly?:{grade?:string};trade_plan?:unknown}>>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
@@ -638,6 +642,24 @@ function App() {
           <div className="breadcrumb"><span>WORKSPACE</span><b>/</b> {activePage === "stock-analysis" ? "종목 분석" : activePage === "history" ? "분석 기록" : activePage === "market-analysis" ? "종합 시장분석실" : "대시보드"}</div>
           <div className="top-actions">
             <button className="icon-button" aria-label="알림"><Bell size={17} /><i /></button>
+            {!__DONMULWON_SHARE_MODE__ && <button
+              type="button"
+              className="shutdown-button"
+              disabled={shutdownPending}
+              onClick={async () => {
+                if (!window.confirm("돈물원2를 종료할까? 개인 사이트, 친구 공유 사이트, 공개 링크가 모두 종료돼.")) return;
+                setShutdownPending(true);
+                try {
+                  const response = await fetch("/api/shutdown", { method: "POST" });
+                  const payload = await response.json().catch(() => ({}));
+                  if (!response.ok) throw new Error(payload.detail || "종료 요청에 실패했습니다.");
+                  window.alert("돈물원2 전체 종료를 시작했어. 이 창은 곧 연결이 끊겨.");
+                } catch (error) {
+                  setShutdownPending(false);
+                  window.alert(error instanceof Error ? error.message : "종료 요청에 실패했습니다.");
+                }
+              }}
+            ><Power size={14} />{shutdownPending ? "종료 중..." : "돈물원2 종료"}</button>}
             <div className="user-chip"><span className="user-avatar">나</span><span>투자자</span><ChevronDown size={14} /></div>
           </div>
         </header>
