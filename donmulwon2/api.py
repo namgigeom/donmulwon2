@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import re
+from pathlib import Path
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -150,6 +151,23 @@ def system_status():
 @app.get("/api/health")
 def health():
     return {"ok": True, "service": "donmulwon2-api", "analysis_engine": "python"}
+
+
+@app.post("/api/shutdown")
+def request_shutdown():
+    """Ask the desktop launcher to stop every local service and the public tunnel."""
+    if _SHARE_MODE:
+        raise HTTPException(status_code=404, detail="공유 서버에서는 종료 기능을 사용할 수 없습니다.")
+    shutdown_file = os.getenv("DONMULWON_SHUTDOWN_FILE", "").strip()
+    if not shutdown_file:
+        raise HTTPException(status_code=503, detail="데스크톱 실행 관리자를 찾을 수 없습니다.")
+    try:
+        marker = Path(shutdown_file)
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(datetime.now().isoformat(timespec="seconds"), encoding="utf-8")
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"종료 요청 저장 실패: {exc}") from exc
+    return {"ok": True, "message": "전체 서비스 종료 요청을 전달했습니다."}
 
 
 @app.get("/api/market/{market}/bulletin")
