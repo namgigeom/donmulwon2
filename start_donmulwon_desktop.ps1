@@ -7,7 +7,10 @@ $Data = Join-Path $Root "data"
 $Started = @()
 function Q([string]$s) { "'" + $s.Replace("'","''") + "'" }
 function Start-Hidden([string]$Name,[string]$Command) {
-  $p=Start-Process powershell.exe -ArgumentList @("-NoProfile","-ExecutionPolicy","Bypass","-Command",$Command) -WorkingDirectory $Root -WindowStyle Hidden -PassThru
+  # Start-Process의 ArgumentList는 인자 배열을 하나의 문자열로 합치므로
+  # 경로의 따옴표가 깨질 수 있다. UTF-16LE Base64 명령으로 전달해 공백/드라이브 문자를 보호한다.
+  $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Command))
+  $p=Start-Process powershell.exe -ArgumentList @("-NoProfile","-ExecutionPolicy","Bypass","-EncodedCommand",$encoded) -WorkingDirectory $Root -WindowStyle Hidden -PassThru
   $script:Started += [pscustomobject]@{Name=$Name;Id=$p.Id}
   Write-Host "$Name 시작" -ForegroundColor DarkGray
 }
