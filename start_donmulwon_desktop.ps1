@@ -17,9 +17,36 @@ function Stop-All {
 try {
   Clear-Host
   Write-Host "DONMULWON 2 - 개인 사이트 + 친구 공유" -ForegroundColor Cyan
-  if(!(Test-Path $Py)){throw "Python 가상환경이 없습니다. 먼저 start_donmulwon.ps1을 실행하세요."}
-  if(!(Get-Command npm -ErrorAction SilentlyContinue)){throw "Node.js/npm을 찾을 수 없습니다."}
-  if(!(Get-Command cloudflared -ErrorAction SilentlyContinue)){throw "cloudflared가 없습니다. 먼저 start_donmulwon_share.ps1을 실행해 설치하세요."}
+  if(!(Test-Path $Py)){
+    Write-Host "프로젝트 Python 가상환경 생성 중..." -ForegroundColor Yellow
+    python -m venv (Join-Path $Root ".venv")
+  }
+  if(!(Test-Path $Py)){throw "Python 가상환경 생성에 실패했습니다. Python 설치를 확인하세요."}
+  if(!(Get-Command npm -ErrorAction SilentlyContinue)){throw "Node.js/npm을 찾을 수 없습니다. Node.js LTS를 설치하세요."}
+
+  Write-Host "실행 환경 확인 중..." -ForegroundColor Yellow
+  & $Py -c "import fastapi, uvicorn, pandas, pykrx, yfinance"
+  if($LASTEXITCODE -ne 0){
+    & $Py -m pip install --upgrade pip
+    & $Py -m pip install -r (Join-Path $Root "requirements.txt")
+    if($LASTEXITCODE -ne 0){throw "Python 패키지 설치에 실패했습니다."}
+  }
+  if(!(Test-Path (Join-Path $WebDir "node_modules"))){
+    Push-Location $WebDir
+    npm install
+    $npmExit=$LASTEXITCODE
+    Pop-Location
+    if($npmExit -ne 0){throw "웹 패키지 설치에 실패했습니다."}
+  }
+  if(!(Get-Command cloudflared -ErrorAction SilentlyContinue)){
+    if(Get-Command winget -ErrorAction SilentlyContinue){
+      Write-Host "Cloudflare Tunnel 설치 중..." -ForegroundColor Yellow
+      winget install --id Cloudflare.cloudflared -e --accept-package-agreements --accept-source-agreements
+      if($LASTEXITCODE -ne 0){throw "cloudflared 설치에 실패했습니다. Cloudflare 공식 설치 페이지에서 설치하세요."}
+      $env:Path=[Environment]::GetEnvironmentVariable("Path","Machine")+";"+[Environment]::GetEnvironmentVariable("Path","User")
+    }
+  }
+  if(!(Get-Command cloudflared -ErrorAction SilentlyContinue)){throw "cloudflared를 찾을 수 없습니다. Cloudflare 공식 설치 페이지에서 설치 후 다시 실행하세요."}
   foreach($port in @(5173,5174,8000,8001)){
     if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw "포트 $port 가 이미 사용 중입니다. 기존 서버를 종료하세요."}
   }
