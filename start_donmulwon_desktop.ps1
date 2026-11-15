@@ -16,8 +16,8 @@ function Start-Hidden([string]$Name,[string]$Command) {
   Write-Host "$Name 시작" -ForegroundColor DarkGray
 }
 function Close-DonmulwonTab {
-  # Locate the Chrome/Edge window by its actual page title, activate that exact
-  # browser process, then close its current DONMULWON tab (not the whole browser).
+  # Close only the DONMULWON tab. Never send Ctrl+W unless the intended
+  # Chrome/Edge process is confirmed as the foreground window.
   try {
     Start-Sleep -Milliseconds 1200
     $browserWindow = Get-Process chrome,msedge -ErrorAction SilentlyContinue |
@@ -28,15 +28,41 @@ function Close-DonmulwonTab {
         Where-Object { $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -like "*돈물원 2*" } |
         Select-Object -First 1
     }
-    if ($browserWindow) {
-      $shell = New-Object -ComObject WScript.Shell
-      [void]$shell.AppActivate([int]$browserWindow.Id)
-      Start-Sleep -Milliseconds 500
-      $shell.SendKeys("^w")
-      Start-Sleep -Milliseconds 500
-    } else {
+
+    if (-not $browserWindow) {
       Write-Host "돈물원 탭을 찾지 못해 브라우저는 그대로 둡니다." -ForegroundColor DarkYellow
+      return
     }
+
+    if (-not ("DonmulwonWindowFocus" -as [type])) {
+      Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class DonmulwonWindowFocus {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+}
+"@
+    }
+
+    $shell = New-Object -ComObject WScript.Shell
+    $activated = $shell.AppActivate([int]$browserWindow.Id)
+    if (-not $activated) {
+      Write-Host "브라우저 활성화에 실패해 탭 닫기를 건너뜁니다." -ForegroundColor DarkYellow
+      return
+    }
+
+    Start-Sleep -Milliseconds 400
+    $foreground = [DonmulwonWindowFocus]::GetForegroundWindow()
+    [uint32]$foregroundPid = 0
+    [void][DonmulwonWindowFocus]::GetWindowThreadProcessId($foreground, [ref]$foregroundPid)
+    if ($foregroundPid -ne [uint32]$browserWindow.Id) {
+      Write-Host "활성 창이 돈물원 브라우저가 아니어서 키 입력을 차단했습니다." -ForegroundColor DarkYellow
+      return
+    }
+
+    $shell.SendKeys("^w")
+    Start-Sleep -Milliseconds 400
   } catch {
     Write-Host "돈물원 탭 자동 닫기 실패: $($_.Exception.Message)" -ForegroundColor DarkYellow
   }
