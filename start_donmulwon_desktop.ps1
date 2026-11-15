@@ -4,6 +4,7 @@ $WebDir = Join-Path $Root "web"
 $Py = Join-Path $Root ".venv\Scripts\python.exe"
 $Log = Join-Path $Root "logs"
 $Data = Join-Path $Root "data"
+$ShutdownFlag = Join-Path $Data "shutdown.request"
 $Started = @()
 function Q([string]$s) { "'" + $s.Replace("'","''") + "'" }
 function Start-Hidden([string]$Name,[string]$Command) {
@@ -54,14 +55,16 @@ try {
     if(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue){throw "포트 $port 가 이미 사용 중입니다. 기존 서버를 종료하세요."}
   }
   New-Item -ItemType Directory -Force -Path $Log,$Data | Out-Null
+  Remove-Item $ShutdownFlag -Force -ErrorAction SilentlyContinue
   $out=Join-Path $Log "cloudflared.stdout.log"
   $err=Join-Path $Log "cloudflared.stderr.log"
   Remove-Item $out,$err -Force -ErrorAction SilentlyContinue
   # PowerShell 변수는 대소문자를 구분하지 않는다. $root/$py/$web처럼
   # 기존 $Root/$Py/$WebDir와 충돌하는 이름을 쓰지 않는다.
-  $pyQ=Q $Py; $rootQ=Q $Root; $webQ=Q $WebDir; $dbQ=Q (Join-Path $Data "donmulwon2_share.db")
+  $pyQ=Q $Py; $rootQ=Q $Root; $webQ=Q $WebDir; $dbQ=Q (Join-Path $Data "donmulwon2_share.db"); $shutdownQ=Q $ShutdownFlag
   Write-Host "[1/4] 개인 사이트 시작" -ForegroundColor Yellow
-  Start-Hidden "개인 API" "Set-Location $rootQ; & $pyQ -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8000"
+  $personalApiCmd='$env:DONMULWON_SHUTDOWN_FILE='+$shutdownQ+'; Set-Location '+$rootQ+'; & '+$pyQ+' -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8000'
+  Start-Hidden "개인 API" $personalApiCmd
   Start-Hidden "개인 웹" "Set-Location $webQ; npm run dev -- --host 127.0.0.1 --strictPort"
   Write-Host "[2/4] 친구 공유 사이트 시작" -ForegroundColor Yellow
   $shareCmd='$env:DONMULWON_SHARE_MODE=''1''; $env:DONMULWON_DB_PATH='+$dbQ+'; Set-Location '+$rootQ+'; & '+$pyQ+' -m uvicorn donmulwon2.api:app --host 127.0.0.1 --port 8001'
@@ -102,7 +105,8 @@ try {
   Write-Host "링크는 클립보드에도 복사했습니다." -ForegroundColor Green
   Write-Host "이 창에서 Enter 또는 Ctrl+C를 누르면 전체 종료됩니다."
   Write-Host "PC가 켜져 있고 실행 창이 유지될 때만 친구가 접속할 수 있습니다."
-  [void](Read-Host "종료하려면 Enter")
+  while(!(Test-Path $ShutdownFlag)){ Start-Sleep -Milliseconds 500 }
+  Write-Host "사이트에서 전체 종료 요청을 받았습니다." -ForegroundColor Yellow
 }catch{
   Write-Host "[오류] $($_.Exception.Message)" -ForegroundColor Red
   [void](Read-Host "Enter를 누르면 서버를 정리합니다")
