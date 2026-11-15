@@ -1,7 +1,4 @@
 import { Fragment, useEffect, useState } from "react";
-
-declare const __DONMULWON_SHARE_MODE__: boolean;
-
 import {
   Activity,
   ArrowDownRight,
@@ -23,6 +20,8 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+
+declare const __DONMULWON_SHARE_MODE__: boolean;
 
 type NavItem = {
   label: string;
