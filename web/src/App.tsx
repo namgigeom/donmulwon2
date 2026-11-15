@@ -652,7 +652,7 @@ function App() {
                   const response = await fetch("/api/shutdown", { method: "POST" });
                   const payload = await response.json().catch(() => ({}));
                   if (!response.ok) throw new Error(payload.detail || "종료 요청에 실패했습니다.");
-                  window.alert("돈물원2 전체 종료를 시작했어. 이 창은 곧 연결이 끊겨.");
+                  // Do not show a blocking alert: the desktop launcher closes this tab after shutdown.
                 } catch (error) {
                   setShutdownPending(false);
                   window.alert(error instanceof Error ? error.message : "종료 요청에 실패했습니다.");
