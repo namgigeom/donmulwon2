@@ -161,6 +161,8 @@ class DonmulwonAnalyzer:
                     latest = result.data.get("latest", {})
                     close, ma240 = latest.get("close"), latest.get("ma240")
                     trading_value = latest.get("trading_value")
+                    weekly = result.data.get("weekly") or {}
+                    weekly_close, weekly_ma10 = weekly.get("close"), weekly.get("ma10")
                     if ma240 is None or close is None:
                         errors.append({
                             "ticker": ticker,
@@ -171,9 +173,14 @@ class DonmulwonAnalyzer:
                             "ticker": ticker,
                             "error": "당일 거래대금 데이터가 없어 500만원 필터 판정 불가",
                         })
-                    elif close >= ma240 and trading_value >= 5_000_000:
+                    elif weekly_close is None or weekly_ma10 is None:
+                        errors.append({
+                            "ticker": ticker,
+                            "error": "주봉 종가 또는 주봉 MA10 데이터가 없어 주봉 추세 필터 판정 불가",
+                        })
+                    elif close >= ma240 and trading_value >= 5_000_000 and weekly_close > weekly_ma10:
                         matches.append(result.data)
-                    # 240일선 아래 또는 당일 거래대금 500만원 미만이면 후보에서 제외한다.
+                    # 240일선, 거래대금, 주봉 MA10 조건 중 하나라도 미충족하면 후보에서 제외한다.
                 elif not result.ok:
                     errors.append({"ticker": ticker, "error": result.message})
                 if progress:
