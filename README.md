@@ -110,3 +110,21 @@ powershell -ExecutionPolicy Bypass -File .\start_donmulwon_share.ps1
 ## 기존 데스크톱 앱
 
 기존 Python/PySide6 데스크톱 프로그램은 레거시로 보존합니다. 웹 버전이 충분히 검증되기 전까지 삭제하거나 대체하지 않습니다.
+
+
+## 바탕화면 원클릭 실행 (개인 + 친구 공유)
+
+```powershell
+git pull origin web-rebuild
+powershell -ExecutionPolicy Bypass -File .\install_donmulwon_shortcut.ps1
+```
+
+설치 스크립트가 Windows 바탕화면에 `DONMULWON 2` 바로가기를 만듭니다.
+- 아이콘을 더블클릭하면 개인 사이트(5173/8000)와 친구 공유 사이트(5174/8001)를 함께 실행합니다.
+- 친구 공유 사이트만 Cloudflare Quick Tunnel로 외부에 공개합니다.
+- 개인용 API와 공유용 API는 별도 프로세스이며, 공유용 API는 `DONMULWON_SHARE_MODE=1` 및 별도 SQLite DB를 사용합니다.
+- 터널이 만들어지면 공유 URL을 화면에 표시하고 클립보드에 복사합니다.
+- 실행 창에서 Enter 또는 Ctrl+C로 종료하면 실행한 서버와 터널을 정리합니다.
+- PC가 켜져 있고 실행 창이 유지될 때만 외부 접속이 가능합니다. 절전 모드에서는 접속할 수 없습니다.
+- Quick Tunnel 주소는 재실행할 때 바뀔 수 있습니다. 매번 표시되는 최신 주소를 친구에게 전달하세요.
+- 로그는 `logs` 폴더에 기록됩니다.
