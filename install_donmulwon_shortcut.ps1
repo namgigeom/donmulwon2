@@ -19,8 +19,6 @@ try {
         try { $icon.Save($stream) } finally { $stream.Dispose() }
     } finally {
         $icon.Dispose()
-        Add-Type -TypeDefinition '[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool DestroyIcon(System.IntPtr hIcon);' -Name NativeIcon -Namespace Win32 -ErrorAction SilentlyContinue
-        [Win32.NativeIcon]::DestroyIcon($iconHandle) | Out-Null
     }
 } finally {
     $bitmap.Dispose()
