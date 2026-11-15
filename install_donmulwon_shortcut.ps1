@@ -27,16 +27,16 @@ try {
 }
 
 $Desktop = [Environment]::GetFolderPath("Desktop")
-$ShortcutPath = Join-Path $Desktop "DONMULWON 2.lnk"
+$ShortcutPath = Join-Path $Desktop "돈물원2.lnk"
 $PowerShell = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
 $WshShell = New-Object -ComObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
 $Shortcut.TargetPath = $PowerShell
 $Shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $Launcher + '"'
 $Shortcut.WorkingDirectory = $Root
-$Shortcut.Description = "DONMULWON 2 개인 사이트 및 친구 공유 링크 실행"
+$Shortcut.Description = "돈물원2 개인 사이트 및 친구 공유 링크 실행"
 $Shortcut.IconLocation = "$IcoIcon,0"
 $Shortcut.WindowStyle = 1
 $Shortcut.Save()
-Write-Host "너구리 아이콘으로 바탕화면 바로가기를 업데이트했습니다." -ForegroundColor Green
+Write-Host "돈물원2 너구리 아이콘 바로가기를 업데이트했습니다." -ForegroundColor Green
 Write-Host "아이콘 파일: $IcoIcon"
