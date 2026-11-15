@@ -67,6 +67,9 @@ button { color: inherit; }
 .icon-button > i { position: absolute; width: 4px; height: 4px; top: 5px; right: 5px; background: #c8a66c; border-radius: 50%; }
 .user-chip { display: flex; align-items: center; gap: 8px; color: #b8c5bb; font-size: 10px; }
 .user-chip > svg { color: #7c8e82; }
+.shutdown-button { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 12px; border: 1px solid rgba(205, 117, 105, .28); border-radius: 7px; background: rgba(150, 65, 57, .10); color: #e2a49c; font-size: 10px; font-weight: 600; cursor: pointer; transition: .15s ease; }
+.shutdown-button:hover:not(:disabled) { border-color: rgba(225, 130, 116, .55); background: rgba(150, 65, 57, .2); color: #ffd0c8; }
+.shutdown-button:disabled { opacity: .7; cursor: wait; }
 .user-avatar { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; background: #35463a; color: #d4e8ca; font-size: 10px; }
 
 .page-content { width: min(1440px, 100%); padding: 34px 38px 20px; margin: 0 auto; }
