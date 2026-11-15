@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 // Public friend-share instance exposed through a Cloudflare Quick Tunnel.
 export default defineConfig({
   plugins: [react()],
+  define: { __DONMULWON_SHARE_MODE__: "true" },
   server: {
     host: "127.0.0.1",
     port: 5174,
