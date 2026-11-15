@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $WebDir = Join-Path $Root "web"
 $Py = Join-Path $Root ".venv\Scripts\python.exe"
