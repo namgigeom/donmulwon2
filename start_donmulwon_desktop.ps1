@@ -5,6 +5,7 @@ $Py = Join-Path $Root ".venv\Scripts\python.exe"
 $Log = Join-Path $Root "logs"
 $Data = Join-Path $Root "data"
 $ShutdownFlag = Join-Path $Data "shutdown.request"
+$BrowserProfile = Join-Path $Data "browser-profile"
 $Started = @()
 function Q([string]$s) { "'" + $s.Replace("'","''") + "'" }
 function Start-Hidden([string]$Name,[string]$Command) {
@@ -97,7 +98,26 @@ try {
     Start-Sleep 1
   }
   if(!$url){throw "공개 주소를 받지 못했습니다. logs/cloudflared.*.log를 확인하세요."}
-  Start-Process "http://127.0.0.1:5173"
+  # Use an isolated browser profile so shutdown closes only this DONMULWON window.
+  $programFilesX86 = [Environment]::GetFolderPath("ProgramFilesX86")
+  $browserCandidates = @(
+    (Join-Path $env:ProgramFiles "Microsoft\Edge\Application\msedge.exe"),
+    (Join-Path $programFilesX86 "Microsoft\Edge\Application\msedge.exe"),
+    (Join-Path $env:LOCALAPPDATA "Microsoft\Edge\Application\msedge.exe"),
+    (Join-Path $env:ProgramFiles "Google\Chrome\Application\chrome.exe"),
+    (Join-Path $programFilesX86 "Google\Chrome\Application\chrome.exe"),
+    (Join-Path $env:LOCALAPPDATA "Google\Chrome\Application\chrome.exe")
+  )
+  $browser = $browserCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+  if(!$browser){
+    $edgeCommand=Get-Command msedge.exe -ErrorAction SilentlyContinue
+    $chromeCommand=Get-Command chrome.exe -ErrorAction SilentlyContinue
+    if($edgeCommand){$browser=$edgeCommand.Source}elseif($chromeCommand){$browser=$chromeCommand.Source}
+  }
+  if(!$browser){throw "Microsoft Edge 또는 Google Chrome을 찾을 수 없습니다. 브라우저 설치 후 다시 실행하세요."}
+  New-Item -ItemType Directory -Force -Path $BrowserProfile | Out-Null
+  $browserProcess=Start-Process $browser -ArgumentList @('--user-data-dir="' + $BrowserProfile + '"', "--app=http://127.0.0.1:5173", "--no-first-run", "--no-default-browser-check") -PassThru
+  $script:Started += [pscustomobject]@{Name="DONMULWON Browser";Id=$browserProcess.Id}
   try{Set-Clipboard $url}catch{}
   Write-Host ""
   Write-Host "내 사이트: http://127.0.0.1:5173" -ForegroundColor Cyan
@@ -114,5 +134,6 @@ try {
   Write-Host "서버와 터널 종료 중..." -ForegroundColor Yellow
   Stop-All
   Write-Host "종료 완료." -ForegroundColor Green
-  Start-Sleep 2
+  Start-Sleep 1
 }
+exit
