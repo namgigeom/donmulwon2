@@ -232,34 +232,40 @@ class KrxDataProvider:
     def ticker_history(self, ticker: str, days: int = 420, *, use_toss: bool = True, end_date: str | None = None) -> DataResult:
         # 분석 기준일을 하나로 고정해 장중 미완성 일봉이 지표에 섞이지 않게 한다.
         confirmed_end = end_date or self.latest_trading_date()
+        toss_error = ""
         if use_toss and self.toss.configured:
             try:
                 rows = self.toss.candles(ticker, count=min(days, 600))
                 if not rows:
-                    return DataResult(False, message=f"Toss API에서 {ticker} 일봉을 받지 못했습니다.")
-                frame = pd.DataFrame(rows)
-                aliases = {
-                    "timestamp": "date", "openPrice": "시가", "highPrice": "고가",
-                    "lowPrice": "저가", "closePrice": "종가", "volume": "거래량",
-                }
-                frame = frame.rename(columns=aliases)
-                required = ["date", "시가", "고가", "저가", "종가", "거래량"]
-                missing = [key for key in required if key not in frame.columns]
-                if missing:
-                    return DataResult(False, message=f"Toss 캔들 응답 필드 누락: {', '.join(missing)}")
-                frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
-                frame = frame.dropna(subset=["date"]).set_index("date").sort_index()
-                for key in ["시가", "고가", "저가", "종가", "거래량"]:
-                    frame[key] = pd.to_numeric(frame[key], errors="coerce")
-                frame = frame.dropna(subset=["시가", "고가", "저가", "종가"])
-                frame = frame[frame.index.strftime("%Y%m%d") <= confirmed_end]
-                if frame.empty:
-                    return DataResult(False, message="Toss 캔들 데이터가 비어 있거나 숫자로 변환되지 않습니다.")
-                return DataResult(True, frame, "Toss Securities Open API 일봉")
+                    toss_error = f"Toss API에서 {ticker} 일봉을 받지 못했습니다."
+                else:
+                    frame = pd.DataFrame(rows)
+                    aliases = {
+                        "timestamp": "date", "openPrice": "시가", "highPrice": "고가",
+                        "lowPrice": "저가", "closePrice": "종가", "volume": "거래량",
+                    }
+                    frame = frame.rename(columns=aliases)
+                    required = ["date", "시가", "고가", "저가", "종가", "거래량"]
+                    missing = [key for key in required if key not in frame.columns]
+                    if missing:
+                        toss_error = f"Toss 캔들 응답 필드 누락: {', '.join(missing)}"
+                    else:
+                        frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+                        frame = frame.dropna(subset=["date"]).set_index("date").sort_index()
+                        for key in ["시가", "고가", "저가", "종가", "거래량"]:
+                            frame[key] = pd.to_numeric(frame[key], errors="coerce")
+                        frame = frame.dropna(subset=["시가", "고가", "저가", "종가"])
+                        frame = frame[frame.index.strftime("%Y%m%d") <= confirmed_end]
+                        if frame.empty:
+                            toss_error = "Toss 캔들 데이터가 비어 있거나 숫자로 변환되지 않습니다."
+                        else:
+                            return DataResult(True, frame, "Toss Securities Open API 일봉")
             except TossApiError as exc:
-                return DataResult(False, message=str(exc))
+                toss_error = str(exc)
             except Exception as exc:
-                return DataResult(False, message=f"Toss {ticker} 일봉 변환 실패: {exc}")
+                toss_error = f"Toss {ticker} 일봉 변환 실패: {exc}"
+
+        # Toss 미설정 또는 Toss 일봉 조회 실패/데이터 부족 시 KRX 정규장 일봉으로 대체한다.
         try:
             end = datetime.strptime(confirmed_end, "%Y%m%d")
             start = end - timedelta(days=int(days * 1.7))
@@ -267,10 +273,19 @@ class KrxDataProvider:
                 start.strftime("%Y%m%d"), confirmed_end, ticker
             )
             if frame is None or frame.empty:
-                return DataResult(False, message=f"{ticker} 일봉 데이터를 받지 못했습니다.")
-            return DataResult(True, frame, "KRX(pykrx) 일봉 데이터 - Toss 미설정")
+                detail = f"KRX 일봉 데이터도 받지 못했습니다. {toss_error}" if toss_error else f"{ticker} 일봉 데이터를 받지 못했습니다."
+                return DataResult(False, message=detail)
+            source = "KRX(pykrx) 정규장 일봉 데이터"
+            if toss_error:
+                source += f" (Toss 조회 실패로 대체: {toss_error[:180]})"
+            elif use_toss and not self.toss.configured:
+                source += " (Toss API 미설정)"
+            return DataResult(True, frame, source)
         except Exception as exc:
-            return DataResult(False, message=f"{ticker} 데이터 수집 실패: {exc}")
+            detail = f"KRX 대체 조회 실패: {exc}"
+            if toss_error:
+                detail += f" (Toss 조회 실패: {toss_error[:180]})"
+            return DataResult(False, message=detail)
 
     def company_profile(self, ticker: str, current_price: float | None = None) -> DataResult:
         """Fetch optional company description, reported statements and analyst consensus from Yahoo Finance."""
