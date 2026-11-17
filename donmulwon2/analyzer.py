@@ -202,12 +202,29 @@ class DonmulwonAnalyzer:
             if limit is not None:
                 tickers = tickers[:limit]
             matches, data_insufficient, ma240_excluded, errors = [], [], [], []
+            stage_counts = {
+                "rsi": 0, "macd": 0, "ma10": 0,
+                "trading_value": 0, "weekly_ma10": 0,
+            }
             total = len(tickers)
             for index, ticker in enumerate(tickers, start=1):
                 result = self.analyze_ticker(
                     ticker, name=ticker_names.get(ticker) or None, save=False,
                     include_ohlcv=False, use_toss=True, as_of_date=date
                 )
+                if result.ok:
+                    checks = (result.data.get("discovery") or {}).get("checks") or {}
+                    if checks.get("rsi_cross_and_rising"):
+                        stage_counts["rsi"] += 1
+                        if checks.get("macd_cross_and_rising"):
+                            stage_counts["macd"] += 1
+                            if checks.get("ma10_breakout"):
+                                stage_counts["ma10"] += 1
+                                if checks.get("trading_value_min"):
+                                    stage_counts["trading_value"] += 1
+                                    if checks.get("weekly_close_above_ma10"):
+                                        stage_counts["weekly_ma10"] += 1
+
                 if result.ok and result.data["matched"]:
                     latest = result.data.get("latest", {})
                     close, ma240 = latest.get("close"), latest.get("ma240")
@@ -264,6 +281,8 @@ class DonmulwonAnalyzer:
             }
             return DataResult(True, {
                 "market": market.upper(), "date": date, "scanned": total,
+                "stage_counts": stage_counts,
+                "ma240_passed_count": len(matches),
                 "matches": matches, "data_insufficient": data_insufficient,
                 "data_insufficient_count": len(data_insufficient),
                 "ma240_excluded": ma240_excluded,
