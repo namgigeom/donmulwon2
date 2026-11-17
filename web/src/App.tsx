@@ -838,7 +838,7 @@ function App() {
                 })}</tbody>
               </table>}
             </div>}
-            {(scanResult.data_insufficient?.length ?? 0) > 0 && <section className="panel" style={{ marginTop: 16, padding: 16 }}>
+            {scanResult && (scanResult.data_insufficient?.length ?? 0) > 0 && <section className="panel" style={{ marginTop: 16, padding: 16 }}>
               <div className="section-heading compact"><div><span className="section-kicker">INSUFFICIENT PRICE HISTORY</span><h2>데이터 부족 후보 · MA240 미확인</h2><p>기술 신호·거래대금·주봉 조건은 충족했지만 240일선 이력이 부족해 정상 후보와 분리했습니다.</p></div><span className="risk-flag">{scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0}종목</span></div>
               <div className="scanner-table-wrap"><table className="scanner-table"><thead><tr><th>탐색 점수</th><th>종목</th><th>종가</th><th>주봉 추세</th><th>MA240 상태</th><th></th></tr></thead><tbody>
                 {(scanResult.data_insufficient ?? []).map((item) => <tr key={item.ticker}>
