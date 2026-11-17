@@ -206,7 +206,7 @@ class DonmulwonAnalyzer:
             for index, ticker in enumerate(tickers, start=1):
                 result = self.analyze_ticker(
                     ticker, name=ticker_names.get(ticker) or None, save=False,
-                    include_ohlcv=False, use_toss=False, as_of_date=date
+                    include_ohlcv=False, use_toss=True, as_of_date=date
                 )
                 if result.ok and result.data["matched"]:
                     latest = result.data.get("latest", {})
