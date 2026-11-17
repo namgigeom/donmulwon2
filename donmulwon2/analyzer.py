@@ -19,9 +19,12 @@ class DonmulwonAnalyzer:
 
     def analyze_ticker(
         self, ticker: str, *, name: str | None = None,
-        save: bool = True, include_ohlcv: bool = True, use_toss: bool = True
+        save: bool = True, include_ohlcv: bool = True, use_toss: bool = True,
+        as_of_date: str | None = None,
     ) -> DataResult:
-        history = self.provider.ticker_history(ticker, days=420, use_toss=use_toss)
+        history = self.provider.ticker_history(
+            ticker, days=420, use_toss=use_toss, end_date=as_of_date
+        )
         if not history.ok:
             return history
         frame = calculate_indicators(history.data)
@@ -155,7 +158,7 @@ class DonmulwonAnalyzer:
             for index, ticker in enumerate(tickers, start=1):
                 result = self.analyze_ticker(
                     ticker, name=ticker_names.get(ticker) or None, save=False,
-                    include_ohlcv=False, use_toss=False
+                    include_ohlcv=False, use_toss=False, as_of_date=date
                 )
                 if result.ok and result.data["matched"]:
                     latest = result.data.get("latest", {})
