@@ -1035,7 +1035,7 @@ function App() {
                         <strong>{stockAnalysis.weekly?.grade_score ?? 0}점 · {stockAnalysis.weekly?.trend ?? "데이터 부족"}</strong>
                       </> : <>
                         <b>발굴 조건 미충족</b>
-                        <strong>주봉 참고 점수 {stockAnalysis.weekly?.grade_score ?? 0}점 · A/B/C 등급 미부여</strong>
+                        <strong>A/B/C 등급 미부여 · 주봉 추세는 참고 정보</strong>
                       </>}
                       <small>{stockAnalysis.weekly?.grade_reason ?? "주봉 데이터가 부족합니다."}</small>
                     </div>
