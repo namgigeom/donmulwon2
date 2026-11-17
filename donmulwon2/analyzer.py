@@ -79,6 +79,15 @@ class DonmulwonAnalyzer:
                 else "필수 발굴 조건 5개 중 미충족 또는 데이터 부족 항목 존재"
             ),
         }
+        if not discovery_matched:
+            # Weekly A/B/C is assigned only after all five discovery gates pass.
+            weekly_reason = weekly_summary.get("grade_reason") or "주봉 지표 참고"
+            weekly_summary = dict(weekly_summary)
+            weekly_summary["grade"] = None
+            weekly_summary["grade_score"] = None
+            weekly_summary["grade_reason"] = (
+                "발굴 조건 미충족으로 A/B/C 등급 미부여 · " + weekly_reason
+            )
         company_loader = getattr(self.provider, "company_profile", None)
         company_result = (
             company_loader(ticker, current_price=close)
