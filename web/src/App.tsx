@@ -476,7 +476,7 @@ function App() {
     } finally { setScanLoading(false); }
   }
 
-  function openCandidate(item: ScanMatch) {
+  function openCandidate(item: Pick<ScanMatch, "ticker" | "name">) {
     setTickerInput(item.ticker);
     setSelectedTicker(item.ticker);
     setChartPeriod("daily");
