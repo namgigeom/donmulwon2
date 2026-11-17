@@ -201,7 +201,7 @@ class DonmulwonAnalyzer:
             tickers = list(ticker_names)
             if limit is not None:
                 tickers = tickers[:limit]
-            matches, data_insufficient, errors = [], [], []
+            matches, data_insufficient, ma240_excluded, errors = [], [], [], []
             total = len(tickers)
             for index, ticker in enumerate(tickers, start=1):
                 result = self.analyze_ticker(
@@ -240,6 +240,13 @@ class DonmulwonAnalyzer:
                         item["scan_score_penalty"] = 0
                         item["scan_status"] = "normal"
                         matches.append(item)
+                    else:
+                        # 5개 필수 조건을 통과했지만 MA240 아래인 종목은
+                        # 이름과 종목코드만 별도 보관해 화면의 더보기에서 확인한다.
+                        ma240_excluded.append({
+                            "ticker": ticker,
+                            "name": result.data.get("name") or ticker,
+                        })
                     # MA240 미확인 종목은 정상 후보의 필터 통과로 간주하지 않는다.
                 elif not result.ok:
                     errors.append({"ticker": ticker, "error": result.message})
@@ -259,6 +266,8 @@ class DonmulwonAnalyzer:
                 "market": market.upper(), "date": date, "scanned": total,
                 "matches": matches, "data_insufficient": data_insufficient,
                 "data_insufficient_count": len(data_insufficient),
+                "ma240_excluded": ma240_excluded,
+                "ma240_excluded_count": len(ma240_excluded),
                 "grade_counts": grade_counts,
                 "error_count": len(errors), "errors": errors[:30],
             }, "종목 검색 완료")
