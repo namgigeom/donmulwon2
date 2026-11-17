@@ -64,8 +64,8 @@ type Candle = {
 };
 type CompanyProfile = { available:boolean; source?:string; symbol?:string; currency?:string; sector?:string; industry?:string; country?:string; website?:string; employees?:number|null; market_cap?:number|null; summary?:string; annual?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null;revenue_growth_pct?:number|null}|null; quarterly?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null}|null; outlook?:{rating?:string|null;target_mean_price?:number|null;target_upside_pct?:number|null;analyst_count?:number|null}|null; message?:string };
 type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{grade?:string;grade_score?:number;grade_reason?:string;trend?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
-type ScanMatch = { ticker:string; name:string; trading_date:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
-type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
+type ScanMatch = { ticker:string; name:string; trading_date:string; scan_score?:number; scan_score_penalty?:number; scan_status?:"normal"|"ma240_unavailable"; scan_status_reason?:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
+type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; data_insufficient?:ScanMatch[]; data_insufficient_count?:number; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
 
@@ -794,7 +794,7 @@ function App() {
                 <button type="button" className={scanMarket === "KOSDAQ" ? "selected" : ""} onClick={() => setScanMarket("KOSDAQ")}>코스닥</button>
               </div>
               <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "전체 종목 검색 시작"}</button>
-              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 후보 {scanResult.matches.length}개 · A {scanResult.grade_counts?.A ?? 0} / B {scanResult.grade_counts?.B ?? 0} / C {scanResult.grade_counts?.C ?? 0} · 오류 {scanResult.error_count}건</span>}
+              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 정상 후보 {scanResult.matches.length}개 · 데이터 부족 {scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0}개 · A {scanResult.grade_counts?.A ?? 0} / B {scanResult.grade_counts?.B ?? 0} / C {scanResult.grade_counts?.C ?? 0} · 오류 {scanResult.error_count}건</span>}
             </div>
             {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
             {scanError && <div className="scanner-state error">{scanError}</div>}
@@ -838,6 +838,20 @@ function App() {
                 })}</tbody>
               </table>}
             </div>}
+            {(scanResult.data_insufficient?.length ?? 0) > 0 && <section className="panel" style={{ marginTop: 16, padding: 16 }}>
+              <div className="section-heading compact"><div><span className="section-kicker">INSUFFICIENT PRICE HISTORY</span><h2>데이터 부족 후보 · MA240 미확인</h2><p>기술 신호·거래대금·주봉 조건은 충족했지만 240일선 이력이 부족해 정상 후보와 분리했습니다.</p></div><span className="risk-flag">{scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0}종목</span></div>
+              <div className="scanner-table-wrap"><table className="scanner-table"><thead><tr><th>탐색 점수</th><th>종목</th><th>종가</th><th>주봉 추세</th><th>MA240 상태</th><th></th></tr></thead><tbody>
+                {(scanResult.data_insufficient ?? []).map((item) => <tr key={item.ticker}>
+                  <td><b>{item.scan_score ?? 0}점</b><small>기본 {item.weekly?.grade_score ?? 0}점 · -20점</small></td>
+                  <td><b>{item.name}</b><small>{item.ticker}</small></td>
+                  <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}</td>
+                  <td title={item.weekly?.grade_reason}>{item.weekly?.trend ?? "데이터 부족"}</td>
+                  <td><span className="risk-flag">미확인</span><small>{item.scan_status_reason ?? "MA240 데이터 부족"}</small></td>
+                  <td><button type="button" className="row-action" onClick={() => openCandidate(item)}>차트 분석</button></td>
+                </tr>)}
+              </tbody></table></div>
+              <p className="scanner-footnote">탐색 점수는 주봉 점수에서 20점을 감점한 참고값입니다. MA240 필터 통과를 의미하지 않으며 정상 후보 등급·집계에는 포함하지 않습니다.</p>
+            </section>}
             <div className="scanner-footnote">등급은 완료 주봉의 종가·MA10/20 위치와 기울기, MACD, RSI를 100점으로 점수화합니다(A 80점 이상 / B 55~79점 / C 54점 이하). 주봉 데이터 부족은 C로 분류합니다. 데이터 출처: KRX 종목 목록 및 설정된 시세 공급자. 스캔은 조회 전용이며 주문을 실행하지 않습니다.</div>
           </section>
 
