@@ -65,7 +65,7 @@ type Candle = {
 type CompanyProfile = { available:boolean; source?:string; symbol?:string; currency?:string; sector?:string; industry?:string; country?:string; website?:string; employees?:number|null; market_cap?:number|null; summary?:string; annual?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null;revenue_growth_pct?:number|null}|null; quarterly?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null}|null; outlook?:{rating?:string|null;target_mean_price?:number|null;target_upside_pct?:number|null;analyst_count?:number|null}|null; message?:string };
 type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; discovery?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{ready?:boolean;grade?:string;grade_score?:number;grade_reason?:string;trend?:string;close?:number;ma10?:number}; latest?:{close?:number;change_pct?:number;trading_value?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 type ScanMatch = { ticker:string; name:string; trading_date:string; scan_score?:number; scan_score_penalty?:number; scan_status?:"normal"|"ma240_unavailable"; scan_status_reason?:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
-type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; data_insufficient?:ScanMatch[]; data_insufficient_count?:number; ma240_excluded?:Array<{ticker:string;name:string}>; ma240_excluded_count?:number; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
+type ScanResult = { market:string; date:string; scanned:number; stage_counts?:{rsi:number;macd:number;ma10:number;trading_value:number;weekly_ma10:number}; ma240_passed_count?:number; matches:ScanMatch[]; data_insufficient?:ScanMatch[]; data_insufficient_count?:number; ma240_excluded?:Array<{ticker:string;name:string}>; ma240_excluded_count?:number; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
 
@@ -798,6 +798,21 @@ function App() {
             </div>
             {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
             {scanError && <div className="scanner-state error">{scanError}</div>}
+            {scanResult && <section className="scanner-stage-summary" style={{ margin: "14px 0", padding: 14, border: "1px solid var(--border)", borderRadius: 10, display: "grid", gap: 9 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><b>순차 통과 집계</b><span className="scan-meta">앞 단계 통과 종목만 다음 단계 검사</span></div>
+              {([
+                ["전체 검사", scanResult.scanned],
+                ["RSI 통과", scanResult.stage_counts?.rsi ?? 0],
+                ["MACD 통과", scanResult.stage_counts?.macd ?? 0],
+                ["MA10 돌파", scanResult.stage_counts?.ma10 ?? 0],
+                ["거래대금 통과", scanResult.stage_counts?.trading_value ?? 0],
+                ["주봉 MA10 통과", scanResult.stage_counts?.weekly_ma10 ?? 0],
+                ["MA240 통과", scanResult.ma240_passed_count ?? scanResult.matches.length],
+              ] as [string, number][]).map(([label, count], index) => <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <span style={{ color: index === 6 ? "var(--text)" : "var(--muted)", fontWeight: index === 6 ? 700 : 500 }}>{label}</span>
+                <b style={{ fontVariantNumeric: "tabular-nums" }}>{count.toLocaleString("ko-KR")}개</b>
+              </div>)}
+            </section>}
             {scanResult && <div className="scanner-table-wrap">
               {scanResult.error_count > 0 && <details className="scanner-errors" style={{ margin: "0 0 14px", padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--muted)" }}>
                 <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 12, opacity: 0.65 }}>검사 오류 {scanResult.error_count}건 · 자세히 보기</summary>
