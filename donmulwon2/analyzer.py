@@ -41,6 +41,44 @@ class DonmulwonAnalyzer:
         close = _number(last.get("종가"))
         prev_close = _number(previous.get("종가"))
         change_pct = ((close / prev_close) - 1) * 100 if close and prev_close else None
+        trading_value = (
+            _number(last.get("거래대금"))
+            if _number(last.get("거래대금")) is not None
+            else (close * _number(last.get("거래량"))
+                  if close is not None and _number(last.get("거래량")) is not None else None)
+        )
+        weekly_last = weekly_indicators.iloc[-1] if not weekly_indicators.empty else None
+        weekly_close_raw = _number(weekly_last.get("종가")) if weekly_last is not None else None
+        weekly_ma10_raw = _number(weekly_last.get("MA10")) if weekly_last is not None else None
+        daily_checks = signal.get("checks") or {}
+        discovery_checks = {
+            "rsi_cross_and_rising": bool(daily_checks.get("rsi_cross_and_rising")),
+            "macd_cross_and_rising": bool(daily_checks.get("macd_cross_and_rising")),
+            "ma10_breakout": bool(daily_checks.get("ma10_breakout")),
+            "trading_value_min": trading_value is not None and trading_value >= 5_000_000,
+            "weekly_close_above_ma10": (
+                weekly_close_raw is not None and weekly_ma10_raw is not None
+                and weekly_close_raw > weekly_ma10_raw
+            ),
+        }
+        discovery_ready = (
+            bool(signal.get("ready"))
+            and weekly_summary.get("ready") is True
+            and trading_value is not None
+            and weekly_close_raw is not None
+            and weekly_ma10_raw is not None
+        )
+        discovery_matched = discovery_ready and all(discovery_checks.values())
+        discovery = {
+            "ready": discovery_ready,
+            "checks": discovery_checks,
+            "matched": bool(discovery_matched),
+            "reason": (
+                "필수 발굴 조건 5개 모두 충족"
+                if discovery_matched
+                else "필수 발굴 조건 5개 중 미충족 또는 데이터 부족 항목 존재"
+            ),
+        }
         company_loader = getattr(self.provider, "company_profile", None)
         company_result = (
             company_loader(ticker, current_price=close)
@@ -55,14 +93,15 @@ class DonmulwonAnalyzer:
                 "available": False, "source": "Yahoo Finance", "message": company_result.message
             },
             "signal": signal,
-            "matched": bool(signal.get("matched")),
+            "discovery": discovery,
+            "matched": bool(discovery_matched),
             "weekly": weekly_summary,
             "weekly_ohlcv": _frame_records(weekly_indicators.tail(52)),
             "latest": {
                 "close": _int(last.get("종가")),
                 "change_pct": change_pct,
                 "volume": _int(last.get("거래량")),
-                "trading_value": _number(last.get("거래대금")) if _number(last.get("거래대금")) is not None else (close * _number(last.get("거래량")) if close is not None and _number(last.get("거래량")) is not None else None),
+                "trading_value": trading_value,
                 "ma10": _number(last.get("MA10")),
                 "ma20": _number(last.get("MA20")),
                 "ma60": _number(last.get("MA60")),
