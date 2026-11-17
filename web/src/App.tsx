@@ -809,7 +809,7 @@ function App() {
                   {scanResult.error_count > (scanResult.errors?.length ?? 0) && <small>화면에는 최대 {scanResult.errors?.length ?? 0}건만 표시합니다.</small>}
                 </div>
               </details>}
-              {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다.</div> :
+              {scanResult.matches.length === 0 ? <div className="scanner-state">{(scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0) > 0 ? "기존 필터를 모두 통과한 정상 후보는 없습니다. 아래 데이터 부족 후보를 별도로 확인하세요." : "현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다."}</div> :
               <table className="scanner-table">
                 <thead><tr><th>등급</th><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>당일 거래대금</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 필터</th><th></th></tr></thead>
                 <tbody>{(["A", "B", "C"] as const).map((grade) => {
