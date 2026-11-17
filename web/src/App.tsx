@@ -63,7 +63,7 @@ type Candle = {
   RSI10?: number | null; RSI14?: number | null;
 };
 type CompanyProfile = { available:boolean; source?:string; symbol?:string; currency?:string; sector?:string; industry?:string; country?:string; website?:string; employees?:number|null; market_cap?:number|null; summary?:string; annual?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null;revenue_growth_pct?:number|null}|null; quarterly?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null}|null; outlook?:{rating?:string|null;target_mean_price?:number|null;target_upside_pct?:number|null;analyst_count?:number|null}|null; message?:string };
-type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{grade?:string;grade_score?:number;grade_reason?:string;trend?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
+type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; discovery?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{ready?:boolean;grade?:string;grade_score?:number;grade_reason?:string;trend?:string;close?:number;ma10?:number}; latest?:{close?:number;change_pct?:number;trading_value?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 type ScanMatch = { ticker:string; name:string; trading_date:string; scan_score?:number; scan_score_penalty?:number; scan_status?:"normal"|"ma240_unavailable"; scan_status_reason?:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
 type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; data_insufficient?:ScanMatch[]; data_insufficient_count?:number; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
@@ -868,10 +868,12 @@ function App() {
                   <div className="stock-plan-heading"><b>{stockAnalysis.name} · 매매 기준 점검</b><span>{stockAnalysis.trading_date}</span></div>
                   <div className="stock-checks">
                     {[
-                      ["RSI(10/14) 골든크로스", "rsi_cross_and_rising"],
-                      ["MACD(5/10/9) 골든크로스", "macd_cross_and_rising"],
+                      ["RSI(10) 골든크로스 · 동반 상승", "rsi_cross_and_rising"],
+                      ["MACD(5/10/9) 골든크로스 · 상승", "macd_cross_and_rising"],
                       ["종가 MA10 상향 돌파", "ma10_breakout"],
-                    ].map(([label, key]) => <span key={key} className={stockAnalysis.signal?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.signal?.checks?.[key] ? "충족" : "미충족"} · {label}</span>)}
+                      ["당일 거래대금 500만원 이상", "trading_value_min"],
+                      ["완료 주봉 종가 MA10 상회", "weekly_close_above_ma10"],
+                    ].map(([label, key]) => <span key={key} className={stockAnalysis.discovery?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.discovery?.checks?.[key] ? "충족" : "미충족"} · {label}</span>)}
                   </div>
                   {stockAnalysis.latest?.trade_plan?.ready ? <div className="stock-plan-grid">
                     <div><small>진입 참고 구간</small><b>{Math.round(stockAnalysis.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ {Math.round(stockAnalysis.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}</b></div>
@@ -980,24 +982,28 @@ function App() {
                         <span className="raccoon-analyst-avatar">🦝</span>
                       </div>
                       {(() => {
-                        const checks = Object.values(stockAnalysis.signal?.checks ?? {});
+                        const checks = Object.values(stockAnalysis.discovery?.checks ?? {});
                         const passed = checks.filter(Boolean).length;
-                        const grade = stockAnalysis.weekly?.grade ?? "C";
+                        const eligible = stockAnalysis.discovery?.matched === true;
+                        const grade = eligible ? (stockAnalysis.weekly?.grade ?? "C") : "미부여";
                         const tradeReady = Boolean(stockAnalysis.latest?.trade_plan?.ready);
-                        const stance = grade === "A" && passed >= 3 ? "적극 관찰"
-                          : (grade === "A" || grade === "B") && passed >= 2 ? "눌림목 대기"
-                            : "관망 우선";
+                        const stance = !eligible ? "발굴 조건 미충족"
+                          : grade === "A" ? "적극 관찰"
+                            : grade === "B" ? "눌림목 대기"
+                              : "관망 우선";
                         const tone = stance === "적극 관찰" ? "positive" : stance === "눌림목 대기" ? "caution" : "negative";
-                        const comment = stance === "적극 관찰"
-                          ? "주봉 추세와 단기 진입 조건이 함께 살아 있구나너굴. 다만 급등 추격은 금물, 계획된 가격대에서 거래량과 손익비를 확인하고 들어가자너굴."
-                          : stance === "눌림목 대기"
-                            ? "추세는 지켜볼 만하지만 아직 진입 신호가 완전히 모이지 않았구나너굴. 저항 돌파를 확인하거나 지지 구간까지 기다리는 편이 낫다너굴."
-                            : "지금은 억지로 수익을 만들 자리가 아니구나너굴. 추세와 진입 조건이 개선될 때까지 현금을 지키는 것도 실력이다너굴.";
+                        const comment = !eligible
+                          ? "필수 발굴 조건 5개를 모두 통과하지 못했으므로 A/B/C 등급을 부여하지 않는다너굴. 조건이 충족될 때까지 후보가 아니다너굴."
+                          : stance === "적극 관찰"
+                            ? "발굴 조건 5개를 통과했고 주봉 추세도 강하구나너굴. 다만 급등 추격은 금물, 계획된 가격대에서 거래량과 손익비를 확인하자너굴."
+                            : stance === "눌림목 대기"
+                              ? "발굴 조건은 통과했지만 주봉 추세는 A가 아니구나너굴. 추가 확인과 리스크 관리를 우선하자너굴."
+                              : "발굴 조건은 통과했지만 주봉 추세가 약하구나너굴. 억지로 진입하지 말고 현금을 지키자너굴.";
                         return <>
                           <div className="raccoon-analyst-grid">
                             <div><small>너구리의 투자의견</small><b className={tone}>{stance}</b></div>
-                            <div><small>주봉 추세 등급</small><b>{grade} · {stockAnalysis.weekly?.grade_score ?? "—"}점</b></div>
-                            <div><small>진입 조건 충족</small><b>{passed}/{checks.length || 4}개</b></div>
+                            <div><small>주봉 추세 등급</small><b>{eligible ? `${grade} · ${stockAnalysis.weekly?.grade_score ?? "—"}점` : "등급 미부여"}</b></div>
+                            <div><small>발굴 조건 충족</small><b>{passed}/5개</b></div>
                             <div><small>스윙 계획</small><b>{tradeReady ? "가격 계획 산출 완료" : "진입 계획 보류"}</b></div>
                           </div>
                           <p className="raccoon-analyst-comment">“{comment}”</p>
@@ -1016,12 +1022,23 @@ function App() {
                 <div className="stock-detail-grid">
                   <section className="stock-detail-card"><div className="section-heading compact"><div><span className="section-kicker">ENTRY CONDITIONS</span><h2>종목 발굴조건</h2></div><ShieldCheck size={18}/></div>
                     {[
-                      ["RSI(10) > RSI(14) 상향 교차 및 동반 상승","rsi_cross_and_rising"],
-                      ["MACD(5/10/9) 시그널 상향 교차 및 상승","macd_cross_and_rising"],
+                      ["RSI(10) > RSI(14) 골든크로스 · 동반 상승","rsi_cross_and_rising"],
+                      ["MACD(5/10/9) 시그널 골든크로스 · 상승 확인","macd_cross_and_rising"],
                       ["종가 MA10 상향 돌파","ma10_breakout"],
-                    ].map(([label,key], index) => <div className="analysis-condition" key={key}><span>{String(index+1).padStart(2,"0")}</span><b>{label}</b><strong className={stockAnalysis.signal?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.signal?.checks?.[key] ? "충족" : "미충족"}</strong></div>)}
-                    <div className="analysis-condition"><span>04</span><b>종가가 MA240 이상</b><strong className={typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" && stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "check-pass" : "check-fail"}>{typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" ? (stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "통과" : "제외") : "판정 불가"}</strong></div>
-                    <div className="weekly-grade-card"><span>주봉 추세 등급</span><b className={"grade-badge grade-" + (stockAnalysis.weekly?.grade ?? "C").toLowerCase()}>{stockAnalysis.weekly?.grade ?? "C"}</b><strong>{stockAnalysis.weekly?.grade_score ?? 0}점 · {stockAnalysis.weekly?.trend ?? "데이터 부족"}</strong><small>{stockAnalysis.weekly?.grade_reason ?? "주봉 데이터가 부족합니다."}</small></div>
+                      ["당일 거래대금 5,000,000원 이상","trading_value_min"],
+                      ["완료된 주봉 종가가 주봉 MA10 위","weekly_close_above_ma10"],
+                    ].map(([label,key], index) => <div className="analysis-condition" key={key}><span>{String(index+1).padStart(2,"0")}</span><b>{label}</b><strong className={stockAnalysis.discovery?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.discovery?.checks?.[key] ? "충족" : "미충족"}</strong></div>)}
+                    <div className="analysis-condition"><span>별도</span><b>240일선 필터 · 종가 MA240 이상</b><strong className={typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" && stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "check-pass" : "check-fail"}>{typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" ? (stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "통과" : "제외") : "판정 불가"}</strong></div>
+                    <div className="weekly-grade-card"><span>주봉 추세 등급</span>
+                      {stockAnalysis.discovery?.matched ? <>
+                        <b className={"grade-badge grade-" + (stockAnalysis.weekly?.grade ?? "C").toLowerCase()}>{stockAnalysis.weekly?.grade ?? "C"}</b>
+                        <strong>{stockAnalysis.weekly?.grade_score ?? 0}점 · {stockAnalysis.weekly?.trend ?? "데이터 부족"}</strong>
+                      </> : <>
+                        <b>발굴 조건 미충족</b>
+                        <strong>주봉 참고 점수 {stockAnalysis.weekly?.grade_score ?? 0}점 · A/B/C 등급 미부여</strong>
+                      </>}
+                      <small>{stockAnalysis.weekly?.grade_reason ?? "주봉 데이터가 부족합니다."}</small>
+                    </div>
                   </section>
                   <section className="stock-detail-card"><div className="section-heading compact"><div><span className="section-kicker">TRADE PLAN</span><h2>진입 · 손절 · 익절 기준</h2></div><ShieldAlert size={18}/></div>
                     {stockAnalysis.latest?.trade_plan?.ready ? <div className="trade-level-grid">
