@@ -65,7 +65,7 @@ type Candle = {
 type CompanyProfile = { available:boolean; source?:string; symbol?:string; currency?:string; sector?:string; industry?:string; country?:string; website?:string; employees?:number|null; market_cap?:number|null; summary?:string; annual?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null;revenue_growth_pct?:number|null}|null; quarterly?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null}|null; outlook?:{rating?:string|null;target_mean_price?:number|null;target_upside_pct?:number|null;analyst_count?:number|null}|null; message?:string };
 type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; discovery?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{ready?:boolean;grade?:string;grade_score?:number;grade_reason?:string;trend?:string;close?:number;ma10?:number}; latest?:{close?:number;change_pct?:number;trading_value?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 type ScanMatch = { ticker:string; name:string; trading_date:string; scan_score?:number; scan_score_penalty?:number; scan_status?:"normal"|"ma240_unavailable"; scan_status_reason?:string; signal?:{checks?:Record<string,boolean>;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
-type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; data_insufficient?:ScanMatch[]; data_insufficient_count?:number; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
+type ScanResult = { market:string; date:string; scanned:number; matches:ScanMatch[]; data_insufficient?:ScanMatch[]; data_insufficient_count?:number; ma240_excluded?:Array<{ticker:string;name:string}>; ma240_excluded_count?:number; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
 
@@ -838,6 +838,16 @@ function App() {
                 })}</tbody>
               </table>}
             </div>}
+            {scanResult && (scanResult.ma240_excluded?.length ?? 0) > 0 && <details className="scanner-errors" style={{ margin: "14px 0", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--muted)" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
+                MA240 미통과 종목 더보기 · {scanResult.ma240_excluded_count ?? scanResult.ma240_excluded?.length ?? 0}개
+              </summary>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                {(scanResult.ma240_excluded ?? []).map((item) => <button key={item.ticker} type="button" className="row-action" onClick={() => openCandidate(item)} title={item.ticker}>
+                  {item.name}
+                </button>)}
+              </div>
+            </details>}
             {scanResult && (scanResult.data_insufficient?.length ?? 0) > 0 && <section className="panel" style={{ marginTop: 16, padding: 16 }}>
               <div className="section-heading compact"><div><span className="section-kicker">INSUFFICIENT PRICE HISTORY</span><h2>데이터 부족 후보 · MA240 미확인</h2><p>기술 신호·거래대금·주봉 조건은 충족했지만 240일선 이력이 부족해 정상 후보와 분리했습니다.</p></div><span className="risk-flag">{scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0}종목</span></div>
               <div className="scanner-table-wrap"><table className="scanner-table"><thead><tr><th>탐색 점수</th><th>종목</th><th>종가</th><th>주봉 추세</th><th>MA240 상태</th><th></th></tr></thead><tbody>
