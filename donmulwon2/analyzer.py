@@ -222,7 +222,7 @@ class DonmulwonAnalyzer:
                                 stage_counts["ma10"] += 1
                                 if checks.get("trading_value_min"):
                                     stage_counts["trading_value"] += 1
-                                    if checks.get("weekly_close_above_ma10"):
+                                    if checks.get("weekly_close_above_ma10") and (result.data.get("discovery") or {}).get("ready"):
                                         stage_counts["weekly_ma10"] += 1
 
                 if result.ok and result.data["matched"]:
