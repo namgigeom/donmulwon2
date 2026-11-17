@@ -798,8 +798,18 @@ function App() {
             </div>
             {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
             {scanError && <div className="scanner-state error">{scanError}</div>}
-            {scanResult && <section className="scanner-stage-summary" style={{ margin: "14px 0", padding: 14, border: "1px solid var(--border)", borderRadius: 10, display: "grid", gap: 9 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><b>순차 통과 집계</b><span className="scan-meta">앞 단계 통과 종목만 다음 단계 검사</span></div>
+            {scanResult && <section className="scanner-stage-summary" style={{
+              margin: "14px 0", padding: "16px 18px",
+              border: "1px solid rgba(133, 166, 139, 0.22)",
+              borderRadius: 12,
+              background: "linear-gradient(135deg, rgba(31, 51, 41, 0.88), rgba(20, 35, 29, 0.94))",
+              boxShadow: "inset 0 1px 0 rgba(220, 239, 218, 0.035), 0 8px 24px rgba(0, 0, 0, 0.12)",
+              display: "grid", gap: 0, overflow: "hidden"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, paddingBottom: 12, marginBottom: 4, borderBottom: "1px solid rgba(145, 174, 148, 0.16)" }}>
+                <b style={{ color: "#d4e4d1", fontSize: 13, letterSpacing: "0.02em" }}>순차 통과 집계</b>
+                <span style={{ color: "#91aa96", fontSize: 10, letterSpacing: "0.02em" }}>앞 단계 통과 종목만 다음 단계 검사</span>
+              </div>
               {([
                 ["전체 검사", scanResult.scanned],
                 ["RSI 통과", scanResult.stage_counts?.rsi ?? 0],
@@ -808,9 +818,21 @@ function App() {
                 ["거래대금 통과", scanResult.stage_counts?.trading_value ?? 0],
                 ["주봉 MA10 통과", scanResult.stage_counts?.weekly_ma10 ?? 0],
                 ["MA240 통과", scanResult.ma240_passed_count ?? scanResult.matches.length],
-              ] as [string, number][]).map(([label, count], index) => <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                <span style={{ color: index === 6 ? "var(--text)" : "var(--muted)", fontWeight: index === 6 ? 700 : 500 }}>{label}</span>
-                <b style={{ fontVariantNumeric: "tabular-nums" }}>{count.toLocaleString("ko-KR")}개</b>
+              ] as [string, number][]).map(([label, count], index) => <div key={label} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+                minHeight: 29, padding: "3px 2px",
+                borderBottom: index === 6 ? "none" : "1px solid rgba(145, 174, 148, 0.075)",
+                background: index === 6 ? "rgba(126, 164, 132, 0.075)" : "transparent",
+                margin: index === 6 ? "5px -8px -5px" : 0,
+                paddingLeft: index === 6 ? 10 : 2, paddingRight: index === 6 ? 10 : 2,
+                borderRadius: index === 6 ? 6 : 0
+              }}>
+                <span style={{ color: index === 0 ? "#c8d9c8" : index === 6 ? "#dcebd9" : "#a9bcae", fontWeight: index === 6 || index === 0 ? 650 : 450, fontSize: 12 }}>{label}</span>
+                <b style={{
+                  color: index === 0 ? "#dce9d9" : index === 6 ? "#b8d9ad" : "#c3d2c3",
+                  fontVariantNumeric: "tabular-nums", fontSize: index === 0 || index === 6 ? 13 : 12,
+                  fontWeight: index === 6 ? 750 : 650
+                }}>{count.toLocaleString("ko-KR")}개</b>
               </div>)}
             </section>}
             {scanResult && <div className="scanner-table-wrap">
