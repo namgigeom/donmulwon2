@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
+from zoneinfo import ZoneInfo
 from typing import Any
 import os
 
@@ -94,7 +95,10 @@ class KrxDataProvider:
 
     @staticmethod
     def latest_trading_date(max_days: int = 14) -> str:
-        end = datetime.now()
+        # KRX 정규장 종가는 15:30에 확정되지만 데이터 제공 지연을 고려해
+        # 15:40 전까지는 당일 봉을 미완성으로 간주하고 직전 거래일을 사용한다.
+        now = datetime.now(ZoneInfo("Asia/Seoul"))
+        end = now.replace(tzinfo=None)
         start = end - timedelta(days=max(max_days, 30))
         try:
             frame = stock.get_index_ohlcv_by_date(
@@ -102,7 +106,14 @@ class KrxDataProvider:
                 name_display=False,
             )
             if frame is not None and not frame.empty:
-                return frame.index[-1].strftime("%Y%m%d")
+                completed = frame.copy()
+                completed.index = pd.to_datetime(completed.index)
+                if now.time() < time(15, 40):
+                    completed = completed[completed.index.date < now.date()]
+                else:
+                    completed = completed[completed.index.date <= now.date()]
+                if not completed.empty:
+                    return completed.index[-1].strftime("%Y%m%d")
         except Exception as exc:
             detail = str(exc)
             if "Expecting value" in detail and not (os.getenv("KRX_ID") and os.getenv("KRX_PW")):
@@ -218,7 +229,9 @@ class KrxDataProvider:
         except Exception as exc:
             return DataResult(False, message=f"투자자별 수급 수집 실패: {exc}")
 
-    def ticker_history(self, ticker: str, days: int = 420, *, use_toss: bool = True) -> DataResult:
+    def ticker_history(self, ticker: str, days: int = 420, *, use_toss: bool = True, end_date: str | None = None) -> DataResult:
+        # 분석 기준일을 하나로 고정해 장중 미완성 일봉이 지표에 섞이지 않게 한다.
+        confirmed_end = end_date or self.latest_trading_date()
         if use_toss and self.toss.configured:
             try:
                 rows = self.toss.candles(ticker, count=min(days, 600))
@@ -239,6 +252,7 @@ class KrxDataProvider:
                 for key in ["시가", "고가", "저가", "종가", "거래량"]:
                     frame[key] = pd.to_numeric(frame[key], errors="coerce")
                 frame = frame.dropna(subset=["시가", "고가", "저가", "종가"])
+                frame = frame[frame.index.strftime("%Y%m%d") <= confirmed_end]
                 if frame.empty:
                     return DataResult(False, message="Toss 캔들 데이터가 비어 있거나 숫자로 변환되지 않습니다.")
                 return DataResult(True, frame, "Toss Securities Open API 일봉")
@@ -247,10 +261,10 @@ class KrxDataProvider:
             except Exception as exc:
                 return DataResult(False, message=f"Toss {ticker} 일봉 변환 실패: {exc}")
         try:
-            end = datetime.now()
+            end = datetime.strptime(confirmed_end, "%Y%m%d")
             start = end - timedelta(days=int(days * 1.7))
             frame = stock.get_market_ohlcv_by_date(
-                start.strftime("%Y%m%d"), self._date(end), ticker
+                start.strftime("%Y%m%d"), confirmed_end, ticker
             )
             if frame is None or frame.empty:
                 return DataResult(False, message=f"{ticker} 일봉 데이터를 받지 못했습니다.")
