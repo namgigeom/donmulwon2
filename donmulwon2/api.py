@@ -189,7 +189,9 @@ def analyze_stock(ticker: str):
 
     store = AnalysisStore()
     analyzer = DonmulwonAnalyzer(store=store)
-    data = _require_success(analyzer.analyze_ticker(ticker, save=False))
+    # Use the same official regular-session KRX candles as the market scanner.
+    # Do not let Toss/intraday/after-hours quotes change discovery conditions.
+    data = _require_success(analyzer.analyze_ticker(ticker, save=False, use_toss=False))
     try:
         store.save_analysis(
             ticker,
