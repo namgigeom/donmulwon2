@@ -258,6 +258,8 @@ class KrxDataProvider:
                         frame = frame[frame.index.strftime("%Y%m%d") <= confirmed_end]
                         if frame.empty:
                             toss_error = "Toss 캔들 데이터가 비어 있거나 숫자로 변환되지 않습니다."
+                        elif len(frame) < 240:
+                            toss_error = f"Toss 일봉 데이터가 {len(frame)}개로 MA240 계산에 부족합니다."
                         else:
                             return DataResult(True, frame, "Toss Securities Open API 일봉")
             except TossApiError as exc:
