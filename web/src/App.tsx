@@ -799,13 +799,13 @@ function App() {
             {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
             {scanError && <div className="scanner-state error">{scanError}</div>}
             {scanResult && <div className="scanner-table-wrap">
-              {scanResult.error_count > 0 && <details className="scanner-errors" style={{ margin: "0 0 14px", padding: "12px 14px", border: "1px solid var(--border, #d8dce5)", borderRadius: 10, background: "var(--surface, #fff)" }}>
-                <summary style={{ cursor: "pointer", fontWeight: 700 }}>검사 오류 {scanResult.error_count}건 확인하기</summary>
-                <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-                  {(scanResult.errors ?? []).map((item, index) => <div key={`${item.ticker}-${index}`} style={{ fontSize: 13, lineHeight: 1.5 }}>
-                    <b>{item.ticker}</b> · {item.error}
+              {scanResult.error_count > 0 && <details className="scanner-errors" style={{ margin: "0 0 14px", padding: "8px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--muted)" }}>
+                <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 12, opacity: 0.65 }}>검사 오류 {scanResult.error_count}건 · 자세히 보기</summary>
+                <div style={{ marginTop: 8, display: "grid", gap: 8, color: "var(--muted)" }}>
+                  {(scanResult.errors ?? []).map((item, index) => <div key={`${item.ticker}-${index}`} style={{ fontSize: 12, lineHeight: 1.5 }}>
+                    <b style={{ color: "var(--text)" }}>{item.ticker}</b> · {item.error}
                   </div>)}
-                  {(!scanResult.errors || scanResult.errors.length === 0) && <div style={{ fontSize: 13 }}>오류 상세 내용이 서버 응답에 포함되지 않았습니다.</div>}
+                  {(!scanResult.errors || scanResult.errors.length === 0) && <div style={{ fontSize: 12 }}>오류 상세 내용이 서버 응답에 포함되지 않았습니다.</div>}
                   {scanResult.error_count > (scanResult.errors?.length ?? 0) && <small>화면에는 최대 {scanResult.errors?.length ?? 0}건만 표시합니다.</small>}
                 </div>
               </details>}
