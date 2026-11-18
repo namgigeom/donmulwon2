@@ -50,6 +50,41 @@ class IndicatorTests(unittest.TestCase):
         self.assertIsInstance(result["matched"], bool)
 
 
+    def test_latest_signal_accepts_golden_cross_on_current_day(self):
+        from unittest.mock import patch
+
+        index = pd.date_range("2026-01-01", periods=3, freq="B")
+        frame = pd.DataFrame(index=index, data={
+            "RSI10": [44.0, 45.0, 49.0], "RSI14": [46.0, 46.0, 47.0],
+            "MACD": [0.05, 0.10, 0.20], "MACD_SIGNAL": [0.08, 0.12, 0.15],
+            "MACD_HIST": [-0.03, -0.02, 0.05],
+            "MA10": [100.0, 101.0, 102.0], "종가": [99, 100, 105],
+            "거래량": [1000, 1000, 1000], "VOLUME_MA10": [1000, 1000, 1000],
+        })
+        with patch("donmulwon2.indicators.calculate_indicators", return_value=frame):
+            result = latest_signal(frame)
+        self.assertEqual(result["timing"], "same_day")
+        self.assertTrue(result["checks"]["rsi_cross_and_rising"])
+        self.assertTrue(result["checks"]["macd_cross_and_rising"])
+
+    def test_latest_signal_accepts_next_day_momentum_confirmation(self):
+        from unittest.mock import patch
+
+        index = pd.date_range("2026-01-01", periods=3, freq="B")
+        frame = pd.DataFrame(index=index, data={
+            "RSI10": [44.0, 50.0, 53.0], "RSI14": [46.0, 48.0, 49.0],
+            "MACD": [0.10, 0.30, 0.42], "MACD_SIGNAL": [0.20, 0.25, 0.31],
+            "MACD_HIST": [-0.10, 0.05, 0.11],
+            "MA10": [100.0, 101.0, 102.0], "종가": [99, 100, 105],
+            "거래량": [1000, 1000, 1000], "VOLUME_MA10": [1000, 1000, 1000],
+        })
+        with patch("donmulwon2.indicators.calculate_indicators", return_value=frame):
+            result = latest_signal(frame)
+        self.assertEqual(result["timing"], "next_day_confirmed")
+        self.assertTrue(result["checks"]["rsi_cross_and_rising"])
+        self.assertTrue(result["checks"]["macd_cross_and_rising"])
+        self.assertTrue(result["checks"]["ma10_breakout"])
+
     def test_weekly_resample_aggregates_ohlcv_and_omits_partial_week(self):
         from donmulwon2.indicators import resample_weekly_ohlcv
 
