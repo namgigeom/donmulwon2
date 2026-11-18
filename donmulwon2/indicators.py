@@ -105,35 +105,66 @@ def resample_weekly_ohlcv(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def latest_signal(frame: pd.DataFrame) -> dict:
-    """Evaluate the user's three mandatory entry conditions on the latest completed bar."""
-    if frame is None or len(frame) < 2:
+    """Accept a fresh golden cross today or a one-session-later momentum confirmation."""
+    if frame is None or len(frame) < 3:
         return {"ready": False, "reason": "지표 계산에 필요한 데이터가 부족합니다."}
 
     df = calculate_indicators(frame)
-    prev, cur = df.iloc[-2], df.iloc[-1]
-    required = ["RSI10", "RSI14", "MACD", "MACD_SIGNAL", "MA10"]
-    if any(pd.isna(cur.get(key)) or pd.isna(prev.get(key)) for key in required):
+    prev2, prev, cur = df.iloc[-3], df.iloc[-2], df.iloc[-1]
+    required = ["RSI10", "RSI14", "MACD", "MACD_SIGNAL", "MACD_HIST", "MA10", "종가"]
+    if any(pd.isna(row.get(key)) for row in (prev2, prev, cur) for key in required):
         return {"ready": False, "reason": "지표 계산 기간이 충분하지 않습니다."}
 
-    rsi_cross = prev["RSI10"] <= prev["RSI14"] and cur["RSI10"] > cur["RSI14"]
-    rsi_rising = cur["RSI10"] > prev["RSI10"] and cur["RSI14"] > prev["RSI14"]
-    macd_cross = prev["MACD"] <= prev["MACD_SIGNAL"] and cur["MACD"] > cur["MACD_SIGNAL"]
-    macd_rising = cur["MACD"] > prev["MACD"] and cur["MACD_SIGNAL"] >= prev["MACD_SIGNAL"]
-    ma_breakout = prev["종가"] <= prev["MA10"] and cur["종가"] > cur["MA10"]
+    # Route A: both golden crosses occur on the latest completed session.
+    rsi_cross_today = prev["RSI10"] <= prev["RSI14"] and cur["RSI10"] > cur["RSI14"]
+    rsi_rising_today = cur["RSI10"] > prev["RSI10"] and cur["RSI14"] > prev["RSI14"]
+    macd_cross_today = prev["MACD"] <= prev["MACD_SIGNAL"] and cur["MACD"] > cur["MACD_SIGNAL"]
+    macd_rising_today = cur["MACD"] > prev["MACD"] and cur["MACD_SIGNAL"] >= prev["MACD_SIGNAL"]
+    today_cross = (
+        rsi_cross_today and rsi_rising_today
+        and macd_cross_today and macd_rising_today
+    )
 
+    # Route B: both crosses happened on the previous session and are confirmed today.
+    rsi_cross_previous = prev2["RSI10"] <= prev2["RSI14"] and prev["RSI10"] > prev["RSI14"]
+    macd_cross_previous = prev2["MACD"] <= prev2["MACD_SIGNAL"] and prev["MACD"] > prev["MACD_SIGNAL"]
+    rsi_follow_through = (
+        cur["RSI10"] > cur["RSI14"]
+        and cur["RSI10"] > prev["RSI10"]
+        and cur["RSI14"] > prev["RSI14"]
+    )
+    macd_follow_through = (
+        cur["MACD"] > cur["MACD_SIGNAL"]
+        and cur["MACD_HIST"] > prev["MACD_HIST"]
+    )
+    next_day_confirmed = (
+        rsi_cross_previous and macd_cross_previous
+        and rsi_follow_through and macd_follow_through
+    )
+
+    # Keep the MA10 breakout as a same-session requirement; the other two
+    # technical gates may be satisfied by either route above.
+    ma_breakout = prev["종가"] <= prev["MA10"] and cur["종가"] > cur["MA10"]
+    signal_timing = (
+        "same_day" if today_cross
+        else "next_day_confirmed" if next_day_confirmed
+        else None
+    )
     checks = {
-        "rsi_cross_and_rising": bool(rsi_cross and rsi_rising),
-        "macd_cross_and_rising": bool(macd_cross and macd_rising),
+        "rsi_cross_and_rising": bool(today_cross or next_day_confirmed),
+        "macd_cross_and_rising": bool(today_cross or next_day_confirmed),
         "ma10_breakout": bool(ma_breakout),
     }
     return {
         "ready": True,
         "checks": checks,
         "matched": all(checks.values()),
+        "timing": signal_timing,
         "rsi10": float(cur["RSI10"]),
         "rsi14": float(cur["RSI14"]),
         "macd": float(cur["MACD"]),
         "macd_signal": float(cur["MACD_SIGNAL"]),
+        "macd_hist": float(cur["MACD_HIST"]),
         "close": int(cur["종가"]),
         "ma10": float(cur["MA10"]),
         "volume_ratio": float(cur["거래량"] / cur["VOLUME_MA10"]) if cur["VOLUME_MA10"] else None,
