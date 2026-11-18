@@ -201,7 +201,7 @@ class DonmulwonAnalyzer:
             tickers = list(ticker_names)
             if limit is not None:
                 tickers = tickers[:limit]
-            matches, data_insufficient, ma240_excluded, errors = [], [], [], []
+            matches, errors = [], []
             stage_counts = {
                 "rsi": 0, "macd": 0, "ma10": 0,
                 "trading_value": 0, "weekly_ma10": 0,
@@ -232,39 +232,26 @@ class DonmulwonAnalyzer:
                     weekly = result.data.get("weekly") or {}
                     weekly_close, weekly_ma10 = weekly.get("close"), weekly.get("ma10")
 
-                    # MA240 미산출 종목은 정상 후보에 섞지 않는다. 다른 필터를
-                    # 통과한 경우에만 별도 '데이터 부족 후보'로 노출한다.
-                    if close is None:
-                        errors.append({"ticker": ticker, "error": "종가 데이터가 없어 필터 판정 불가"})
-                    elif trading_value is None:
-                        errors.append({"ticker": ticker, "error": "당일 거래대금 데이터가 없어 500만원 필터 판정 불가"})
-                    elif weekly_close is None or weekly_ma10 is None:
-                        errors.append({"ticker": ticker, "error": "주봉 종가 또는 주봉 MA10 데이터가 없어 주봉 추세 필터 판정 불가"})
-                    elif trading_value < 5_000_000 or weekly_close <= weekly_ma10:
-                        # 기존 거래대금·주봉 필터는 그대로 적용한다.
-                        pass
-                    elif ma240 is None:
-                        item = dict(result.data)
-                        weekly_score = (weekly.get("grade_score") or 0)
+                    # MA240은 탈락 조건이 아니다. 5개 필수 조건 통과 후보는 모두 정상 후보에 포함하고,
+                    # MA240 상태에 따라 탐색 점수만 차등 감점한다.
+                    item = dict(result.data)
+                    weekly_score = weekly.get("grade_score") or 0
+                    if ma240 is None:
                         item["scan_score"] = max(0, weekly_score - 20)
                         item["scan_score_penalty"] = 20
                         item["scan_status"] = "ma240_unavailable"
                         item["scan_status_reason"] = "MA240 데이터 부족 · 상장 초기 또는 시세 이력 확인 필요"
-                        data_insufficient.append(item)
-                    elif close >= ma240:
-                        item = dict(result.data)
-                        item["scan_score"] = weekly.get("grade_score") or 0
+                    elif close < ma240:
+                        item["scan_score"] = max(0, weekly_score - 15)
+                        item["scan_score_penalty"] = 15
+                        item["scan_status"] = "ma240_below"
+                        item["scan_status_reason"] = "종가가 MA240 아래 · 장기 추세 미통과"
+                    else:
+                        item["scan_score"] = weekly_score
                         item["scan_score_penalty"] = 0
                         item["scan_status"] = "normal"
-                        matches.append(item)
-                    else:
-                        # 5개 필수 조건을 통과했지만 MA240 아래인 종목은
-                        # 이름과 종목코드만 별도 보관해 화면의 더보기에서 확인한다.
-                        ma240_excluded.append({
-                            "ticker": ticker,
-                            "name": result.data.get("name") or ticker,
-                        })
-                    # MA240 미확인 종목은 정상 후보의 필터 통과로 간주하지 않는다.
+                        item["scan_status_reason"] = "종가가 MA240 이상"
+                    matches.append(item)
                 elif not result.ok:
                     errors.append({"ticker": ticker, "error": result.message})
                 if progress:
@@ -272,7 +259,7 @@ class DonmulwonAnalyzer:
             grade_order = {"A": 0, "B": 1, "C": 2}
             matches.sort(key=lambda item: (
                 grade_order.get((item.get("weekly") or {}).get("grade", "C"), 2),
-                -((item.get("weekly") or {}).get("grade_score") or 0),
+                -(item.get("scan_score") or 0),
                 -((item.get("latest") or {}).get("volume_ratio") or 0),
             ))
             grade_counts = {
@@ -282,11 +269,7 @@ class DonmulwonAnalyzer:
             return DataResult(True, {
                 "market": market.upper(), "date": date, "scanned": total,
                 "stage_counts": stage_counts,
-                "ma240_passed_count": len(matches),
-                "matches": matches, "data_insufficient": data_insufficient,
-                "data_insufficient_count": len(data_insufficient),
-                "ma240_excluded": ma240_excluded,
-                "ma240_excluded_count": len(ma240_excluded),
+                "matches": matches,
                 "grade_counts": grade_counts,
                 "error_count": len(errors), "errors": errors[:30],
             }, "종목 검색 완료")
