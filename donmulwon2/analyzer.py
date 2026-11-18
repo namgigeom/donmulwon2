@@ -236,7 +236,9 @@ class DonmulwonAnalyzer:
                     # MA240 상태에 따라 탐색 점수만 차등 감점한다.
                     item = dict(result.data)
                     weekly_score = weekly.get("grade_score") or 0
-                    if ma240 is None:
+                    if close is None:
+                        errors.append({"ticker": ticker, "error": "종가 데이터가 없어 MA240 상태를 판정할 수 없습니다."})
+                    elif ma240 is None:
                         item["scan_score"] = max(0, weekly_score - 20)
                         item["scan_score_penalty"] = 20
                         item["scan_status"] = "ma240_unavailable"
