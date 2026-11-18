@@ -126,11 +126,35 @@ function translateCompanyCategory(value?: string, kind: "sector" | "industry" = 
 function translateCompanySummary(value?: string, symbol?: string) {
   if (!value) return "회사 사업 소개 데이터가 제공되지 않습니다.";
   const normalized = value.toLowerCase();
+  if ((symbol || "").toUpperCase().includes("150900") ||
+      (normalized.includes("fasoo ai") && normalized.includes("unstructured data security"))) {
+    return "파수AI는 기업의 비정형 데이터 보안 및 콘텐츠 관리 솔루션을 제공하는 국내 소프트웨어 기업입니다. 주요 제품은 문서 암호화(DRM), 데이터 탐색·분류 및 유출 방지(DLP), 기업용 콘텐츠 관리 플랫폼 랩소디(Wrapsody), AI 기반 개인정보 보호 솔루션 등입니다. 금융·제조·의료·공공기관을 주요 고객으로 두고 있으며, 2000년에 설립되어 서울에 본사를 두고 있습니다. 2026년 4월 사명을 파수에서 파수AI로 변경했습니다.";
+  }
   if ((symbol || "").toUpperCase().includes("052790") ||
       (normalized.includes("actoz soft") && normalized.includes("game company"))) {
     return "액토즈소프트는 국내외에서 게임 사업을 운영하는 기업입니다. 다양한 장르의 PC 온라인 게임과 모바일 게임을 개발·서비스하며, e스포츠 사업에도 참여하고 있습니다. 1996년에 설립되었으며 대한민국 서울에 본사를 두고 있습니다. 샨다게임즈의 자회사입니다.";
   }
-  return value;
+  return "해당 기업의 사업 소개 원문은 한국어 번역 데이터가 아직 준비되지 않았습니다.";
+}
+function buildCompanyOutlook(company?: CompanyProfile) {
+  if (!company?.available) return "기업 실적 데이터가 부족해 성장 전망을 판단하기 어렵습니다.";
+  const growth = company.annual?.revenue_growth_pct;
+  const operating = company.annual?.operating_income;
+  const analystUpside = company.outlook?.target_upside_pct;
+  const parts: string[] = [];
+  if (typeof growth === "number") {
+    parts.push(growth > 0 ? `최근 연간 매출이 전년 대비 ${growth.toFixed(1)}% 증가해 외형 성장세를 보였습니다`
+      : growth < 0 ? `최근 연간 매출이 전년 대비 ${Math.abs(growth).toFixed(1)}% 감소해 성장 둔화 여부를 확인해야 합니다`
+      : "최근 연간 매출은 전년과 비슷한 수준입니다");
+  }
+  if (typeof operating === "number") {
+    parts.push(operating > 0 ? "영업이익 흑자를 기록했습니다" : "영업손실 상태로 수익성 개선이 필요합니다");
+  }
+  if (typeof analystUpside === "number") {
+    parts.push(`애널리스트 평균 목표주가는 현재가 대비 ${analystUpside > 0 ? "+" : ""}${analystUpside.toFixed(1)}% 수준입니다`);
+  }
+  if (!parts.length) return "매출 성장률과 수익성, 시장 전망을 확인할 수 있는 자료가 부족해 추가 실적 확인이 필요합니다.";
+  return parts.join(", ") + ". 향후 성장 지속 여부는 신규 사업의 매출 기여와 영업이익 개선을 함께 확인해야 합니다.";
 }
 
 function formatCompanyPrice(value: number | null | undefined, currency?: string) {
@@ -969,6 +993,7 @@ function App() {
                   <div className="section-heading compact"><div><span className="section-kicker">기업 정보 · 재무 실적</span><h2>종목 정보 · 실적 · 전망</h2></div><span className="company-source">{stockAnalysis.company?.source ?? "기업 데이터"}</span></div>
                   {stockAnalysis.company?.available ? <>
                     <div className="company-summary">{translateCompanySummary(stockAnalysis.company.summary, stockAnalysis.company.symbol)}</div>
+                    <div className="company-outlook-summary"><b>미래 전망</b><p>{buildCompanyOutlook(stockAnalysis.company)}</p></div>
                     <div className="company-facts">
                       <div><small>업종</small><b>{translateCompanyCategory(stockAnalysis.company.sector, "sector")}</b></div>
                       <div><small>세부 산업</small><b>{translateCompanyCategory(stockAnalysis.company.industry, "industry")}</b></div>
