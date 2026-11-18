@@ -837,7 +837,7 @@ function App() {
                   {scanResult.error_count > (scanResult.errors?.length ?? 0) && <small>화면에는 최대 {scanResult.errors?.length ?? 0}건만 표시합니다.</small>}
                 </div>
               </details>}
-              {scanResult.matches.length === 0 ? <div className="scanner-state">"현재 기준을 모두 충족한 정상 후보가 없습니다."</div> :
+              {scanResult.matches.length === 0 ? <div className="scanner-state">현재 기준을 모두 충족한 정상 후보가 없습니다.</div> :
               <table className="scanner-table">
                 <thead><tr><th>등급</th><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>당일 거래대금</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 필터</th><th></th></tr></thead>
                 <tbody>{(["A", "B", "C"] as const).map((grade) => {
