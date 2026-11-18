@@ -142,9 +142,19 @@ def latest_signal(frame: pd.DataFrame) -> dict:
         and rsi_follow_through and macd_follow_through
     )
 
-    # Keep the MA10 breakout as a same-session requirement; the other two
-    # technical gates may be satisfied by either route above.
-    ma_breakout = prev["종가"] <= prev["MA10"] and cur["종가"] > cur["MA10"]
+    # Route A requires the MA10 breakout today. Route B requires that the
+    # breakout happened on the golden-cross day and price remains above MA10
+    # on the confirmation session.
+    ma_breakout_today = prev["종가"] <= prev["MA10"] and cur["종가"] > cur["MA10"]
+    ma_breakout_previous = (
+        prev2["종가"] <= prev2["MA10"]
+        and prev["종가"] > prev["MA10"]
+        and cur["종가"] > cur["MA10"]
+    )
+    ma_breakout = (
+        (today_cross and ma_breakout_today)
+        or (next_day_confirmed and ma_breakout_previous)
+    )
     signal_timing = (
         "same_day" if today_cross
         else "next_day_confirmed" if next_day_confirmed
