@@ -64,8 +64,8 @@ type Candle = {
 };
 type CompanyProfile = { available:boolean; source?:string; symbol?:string; currency?:string; sector?:string; industry?:string; country?:string; website?:string; employees?:number|null; market_cap?:number|null; summary?:string; annual?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null;revenue_growth_pct?:number|null}|null; quarterly?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null}|null; outlook?:{rating?:string|null;target_mean_price?:number|null;target_upside_pct?:number|null;analyst_count?:number|null}|null; message?:string };
 type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; discovery?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{ready?:boolean;grade?:string;grade_score?:number;grade_reason?:string;trend?:string;close?:number;ma10?:number}; latest?:{close?:number;change_pct?:number;trading_value?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
-type ScanMatch = { ticker:string; name:string; trading_date:string; scan_score?:number; scan_score_penalty?:number; scan_status?:"normal"|"ma240_unavailable"; scan_status_reason?:string; signal?:{checks?:Record<string,boolean>;timing?:"same_day"|"next_day_confirmed"|null;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
-type ScanResult = { market:string; date:string; scanned:number; stage_counts?:{rsi:number;macd:number;ma10:number;trading_value:number;weekly_ma10:number}; ma240_passed_count?:number; matches:ScanMatch[]; data_insufficient?:ScanMatch[]; data_insufficient_count?:number; ma240_excluded?:Array<{ticker:string;name:string}>; ma240_excluded_count?:number; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
+type ScanMatch = { ticker:string; name:string; trading_date:string; scan_score?:number; scan_score_penalty?:number; scan_status?:"normal"|"ma240_below"|"ma240_unavailable"; scan_status_reason?:string; signal?:{checks?:Record<string,boolean>;timing?:"same_day"|"next_day_confirmed"|null;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
+type ScanResult = { market:string; date:string; scanned:number; stage_counts?:{rsi:number;macd:number;ma10:number;trading_value:number;weekly_ma10:number}; matches:ScanMatch[]; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
 
@@ -817,22 +817,13 @@ function App() {
                 ["MA10 돌파", scanResult.stage_counts?.ma10 ?? 0],
                 ["거래대금 통과", scanResult.stage_counts?.trading_value ?? 0],
                 ["주봉 MA10 통과", scanResult.stage_counts?.weekly_ma10 ?? 0],
-                ["MA240 통과", scanResult.ma240_passed_count ?? scanResult.matches.length],
               ] as [string, number][]).map(([label, count], index) => <div key={label} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
                 minHeight: 29, padding: "3px 2px",
-                borderBottom: index === 6 ? "none" : "1px solid rgba(145, 174, 148, 0.075)",
-                background: index === 6 ? "rgba(126, 164, 132, 0.075)" : "transparent",
-                margin: index === 6 ? "5px -8px -5px" : 0,
-                paddingLeft: index === 6 ? 10 : 2, paddingRight: index === 6 ? 10 : 2,
-                borderRadius: index === 6 ? 6 : 0
+                borderBottom: index === 5 ? "none" : "1px solid rgba(145, 174, 148, 0.075)"
               }}>
-                <span style={{ color: index === 0 ? "#c8d9c8" : index === 6 ? "#dcebd9" : "#a9bcae", fontWeight: index === 6 || index === 0 ? 650 : 450, fontSize: 12 }}>{label}</span>
-                <b style={{
-                  color: index === 0 ? "#dce9d9" : index === 6 ? "#b8d9ad" : "#c3d2c3",
-                  fontVariantNumeric: "tabular-nums", fontSize: index === 0 || index === 6 ? 13 : 12,
-                  fontWeight: index === 6 ? 750 : 650
-                }}>{count.toLocaleString("ko-KR")}개</b>
+                <span style={{ color: index === 0 ? "#c8d9c8" : "#a9bcae", fontWeight: index === 0 ? 650 : 450, fontSize: 12 }}>{label}</span>
+                <b style={{ color: index === 0 ? "#dce9d9" : "#c3d2c3", fontVariantNumeric: "tabular-nums", fontSize: index === 0 ? 13 : 12, fontWeight: 650 }}>{count.toLocaleString("ko-KR")}개</b>
               </div>)}
             </section>}
             {scanResult && <div className="scanner-table-wrap">
@@ -846,7 +837,7 @@ function App() {
                   {scanResult.error_count > (scanResult.errors?.length ?? 0) && <small>화면에는 최대 {scanResult.errors?.length ?? 0}건만 표시합니다.</small>}
                 </div>
               </details>}
-              {scanResult.matches.length === 0 ? <div className="scanner-state">{(scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0) > 0 ? "기존 필터를 모두 통과한 정상 후보는 없습니다. 아래 데이터 부족 후보를 별도로 확인하세요." : "현재 기준을 모두 충족한 종목이 없습니다. 조건을 임의로 완화하지 않았습니다."}</div> :
+              {scanResult.matches.length === 0 ? <div className="scanner-state">"현재 기준을 모두 충족한 정상 후보가 없습니다."</div> :
               <table className="scanner-table">
                 <thead><tr><th>등급</th><th>종목</th><th>종가</th><th>RSI 10 / 14</th><th>거래량 / 10일 평균</th><th>당일 거래대금</th><th>주봉 추세</th><th>진입 참고 구간</th><th>손절 / 목표 1</th><th>240일선 필터</th><th></th></tr></thead>
                 <tbody>{(["A", "B", "C"] as const).map((grade) => {
@@ -858,7 +849,7 @@ function App() {
                     {group.map((item) => {
                       const below240 = typeof item.latest?.ma240 === "number" && typeof item.latest?.close === "number" && item.latest.close < item.latest.ma240;
                       return <tr key={item.ticker}>
-                        <td><span className={`grade-badge grade-${(item.weekly?.grade ?? "C").toLowerCase()}`}>{item.weekly?.grade ?? "C"}</span><small>{item.weekly?.grade_score ?? 0}점</small></td>
+                        <td><span className={`grade-badge grade-${(item.weekly?.grade ?? "C").toLowerCase()}`}>{item.weekly?.grade ?? "C"}</span><small>{item.scan_score ?? item.weekly?.grade_score ?? 0}점</small>{(item.scan_score_penalty ?? 0) > 0 && <small>-{item.scan_score_penalty}점</small>}</td>
                         <td><b>{item.name}</b><small>{item.ticker}</small><small>{item.signal?.timing === "same_day" ? "당일 골든크로스" : item.signal?.timing === "next_day_confirmed" ? "다음 날 추세 확인" : "신호 유형 확인 불가"}</small></td>
                         <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}</td>
                         <td>{item.signal?.rsi10?.toFixed(1) ?? "—"} / {item.signal?.rsi14?.toFixed(1) ?? "—"}</td>
@@ -867,7 +858,7 @@ function App() {
                         <td title={item.weekly?.grade_reason}>{item.weekly?.ready ? item.weekly.trend : "데이터 부족"}</td>
                         <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ ${Math.round(item.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}` : "산출 불가"}</td>
                         <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")} / ${Math.round(item.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}` : "—"}</td>
-                        <td><span className={below240 ? "risk-flag" : "risk-ok"}>{below240 ? "제외 대상" : "통과"}</span></td>
+                        <td><span className={item.scan_status === "ma240_unavailable" || below240 ? "risk-flag" : "risk-ok"}>{item.scan_status === "ma240_unavailable" ? "데이터 부족 · -20점" : below240 ? "미통과 · -15점" : "통과"}</span></td>
                         <td><button type="button" className="row-action" onClick={() => openCandidate(item)}>차트 분석</button></td>
                       </tr>;
                     })}
@@ -875,30 +866,6 @@ function App() {
                 })}</tbody>
               </table>}
             </div>}
-            {scanResult && (scanResult.ma240_excluded?.length ?? 0) > 0 && <details className="scanner-errors" style={{ margin: "14px 0", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 8, background: "transparent", color: "var(--muted)" }}>
-              <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 13 }}>
-                MA240 미통과 종목 더보기 · {scanResult.ma240_excluded_count ?? scanResult.ma240_excluded?.length ?? 0}개
-              </summary>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                {(scanResult.ma240_excluded ?? []).map((item) => <button key={item.ticker} type="button" className="row-action" onClick={() => openCandidate(item)} title={item.ticker}>
-                  {item.name}
-                </button>)}
-              </div>
-            </details>}
-            {scanResult && (scanResult.data_insufficient?.length ?? 0) > 0 && <section className="panel" style={{ marginTop: 16, padding: 16 }}>
-              <div className="section-heading compact"><div><span className="section-kicker">INSUFFICIENT PRICE HISTORY</span><h2>데이터 부족 후보 · MA240 미확인</h2><p>기술 신호·거래대금·주봉 조건은 충족했지만 240일선 이력이 부족해 정상 후보와 분리했습니다.</p></div><span className="risk-flag">{scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0}종목</span></div>
-              <div className="scanner-table-wrap"><table className="scanner-table"><thead><tr><th>탐색 점수</th><th>종목</th><th>종가</th><th>주봉 추세</th><th>MA240 상태</th><th></th></tr></thead><tbody>
-                {(scanResult.data_insufficient ?? []).map((item) => <tr key={item.ticker}>
-                  <td><b>{item.scan_score ?? 0}점</b><small>기본 {item.weekly?.grade_score ?? 0}점 · -20점</small></td>
-                  <td><b>{item.name}</b><small>{item.ticker}</small></td>
-                  <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}</td>
-                  <td title={item.weekly?.grade_reason}>{item.weekly?.trend ?? "데이터 부족"}</td>
-                  <td><span className="risk-flag">미확인</span><small>{item.scan_status_reason ?? "MA240 데이터 부족"}</small></td>
-                  <td><button type="button" className="row-action" onClick={() => openCandidate(item)}>차트 분석</button></td>
-                </tr>)}
-              </tbody></table></div>
-              <p className="scanner-footnote">탐색 점수는 주봉 점수에서 20점을 감점한 참고값입니다. MA240 필터 통과를 의미하지 않으며 정상 후보 등급·집계에는 포함하지 않습니다.</p>
-            </section>}
             <div className="scanner-footnote">등급은 완료 주봉의 종가·MA10/20 위치와 기울기, MACD, RSI를 100점으로 점수화합니다(A 80점 이상 / B 55~79점 / C 54점 이하). 주봉 데이터 부족은 C로 분류합니다. 데이터 출처: KRX 종목 목록 및 설정된 시세 공급자. 스캔은 조회 전용이며 주문을 실행하지 않습니다.</div>
           </section>
 
@@ -1075,7 +1042,7 @@ function App() {
                       ["당일 거래대금 5,000,000원 이상","trading_value_min"],
                       ["완료된 주봉 종가가 주봉 MA10 위","weekly_close_above_ma10"],
                     ].map(([label,key], index) => <div className="analysis-condition" key={key}><span>{String(index+1).padStart(2,"0")}</span><b>{label}</b><strong className={stockAnalysis.discovery?.checks?.[key] ? "check-pass" : "check-fail"}>{stockAnalysis.discovery?.checks?.[key] ? "충족" : "미충족"}</strong></div>)}
-                    <div className="analysis-condition"><span>별도</span><b>240일선 필터 · 종가 MA240 이상</b><strong className={typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" && stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "check-pass" : "check-fail"}>{typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" ? (stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "통과" : "제외") : "판정 불가"}</strong></div>
+                    <div className="analysis-condition"><span>별도</span><b>240일선 필터 · 종가 MA240 이상</b><strong className={typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" && stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "check-pass" : "check-fail"}>{typeof stockAnalysis.latest?.ma240 === "number" && typeof stockAnalysis.latest?.close === "number" ? (stockAnalysis.latest.close >= stockAnalysis.latest.ma240 ? "통과" : "미통과") : "판정 불가"}</strong></div>
                     <div className="weekly-grade-card"><span>주봉 추세 등급</span>
                       {stockAnalysis.discovery?.matched ? <>
                         <b className={"grade-badge grade-" + (stockAnalysis.weekly?.grade ?? "C").toLowerCase()}>{stockAnalysis.weekly?.grade ?? "C"}</b>
