@@ -443,6 +443,7 @@ function App() {
   const [systemCheckError, setSystemCheckError] = useState("");
   const [systemCheckedAt, setSystemCheckedAt] = useState("");
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
+  const [usMarketStatus, setUsMarketStatus] = useState("미국장 데이터 조회 대기");
   const [raccoonNote, setRaccoonNote] = useState<{status:"loading"|"ready"|"error";trading_date?:string;note?:string;model?:string;error?:string}>({status:"loading"});
   const [scanMarket, setScanMarket] = useState<MarketCode>("ALL");
   const [scanLoading, setScanLoading] = useState(false);
@@ -526,8 +527,8 @@ function App() {
         if (!healthResponse.ok) throw new Error("API health check failed");
         setApiStatus("Python API 연결됨");
 
-        const codes: MarketCode[] = ["KOSPI", "KOSDAQ", "US"];
-        const results = await Promise.allSettled(
+        const codes: MarketCode[] = ["KOSPI", "KOSDAQ"];
+        const domesticResults = await Promise.allSettled(
           codes.map(async (code) => {
             const response = await fetch(apiBase + "/api/market/" + code + "/bulletin", {
               signal: controller.signal,
@@ -537,12 +538,12 @@ function App() {
           }),
         );
 
-        const next: Partial<Record<MarketCode, MarketBulletin>> = {};
-        results.forEach((result) => {
-          if (result.status === "fulfilled") next[result.value[0]] = result.value[1] as MarketBulletin;
+        const domesticNext: Partial<Record<MarketCode, MarketBulletin>> = {};
+        domesticResults.forEach((result) => {
+          if (result.status === "fulfilled") domesticNext[result.value[0]] = result.value[1] as MarketBulletin;
         });
-        setMarketData(next);
-        if (next.KOSPI && next.KOSDAQ) {
+        setMarketData((current) => ({ ...current, ...domesticNext }));
+        if (domesticNext.KOSPI && domesticNext.KOSDAQ) {
           try {
             const noteResponse = await fetch(apiBase + "/api/market/raccoon-note", { signal: controller.signal });
             const notePayload = await noteResponse.json();
@@ -555,8 +556,23 @@ function App() {
         } else {
           setRaccoonNote({ status: "error", error: "코스피·코스닥 시장 데이터가 모두 필요합니다." });
         }
-        if (!next.KOSPI && !next.KOSDAQ && !next.US) setApiStatus("시장 데이터 미수신");
-        else if (!next.KOSPI || !next.KOSDAQ) setApiStatus("일부 국내 시장 데이터 미수신");
+        if (!domesticNext.KOSPI && !domesticNext.KOSDAQ) setApiStatus("국내 시장 데이터 미수신");
+        else if (!domesticNext.KOSPI || !domesticNext.KOSDAQ) setApiStatus("일부 국내 시장 데이터 미수신");
+
+        setUsMarketStatus("미국장 데이터 수집 중 · 첫 조회는 시간이 걸릴 수 있습니다.");
+        fetch(apiBase + "/api/market/US/bulletin", { signal: controller.signal })
+          .then(async (response) => {
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail || "미국 시장 데이터를 불러오지 못했습니다.");
+            if (!controller.signal.aborted) {
+              setMarketData((current) => ({ ...current, US: payload as MarketBulletin }));
+              setUsMarketStatus("미국장 데이터 수신 완료");
+            }
+          })
+          .catch((usError) => {
+            if (usError instanceof Error && usError.name === "AbortError") return;
+            if (!controller.signal.aborted) setUsMarketStatus(usError instanceof Error ? "미국장 데이터 오류 · " + usError.message : "미국장 데이터 조회 실패");
+          });
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") return;
         setApiStatus("Python API 연결 실패");
