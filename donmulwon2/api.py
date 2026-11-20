@@ -219,7 +219,9 @@ def analyze_us_stock(ticker: str):
         return analyze_us_ticker(ticker)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"미국 종목 데이터 조회 실패: {exc}") from exc
-\n\n@app.get("/api/stocks/{ticker}/rsi-debug")
+
+
+@app.get("/api/stocks/{ticker}/rsi-debug")
 def debug_stock_rsi(ticker: str):
     """Expose candle provenance and recent RSI inputs for troubleshooting."""
     if not re.fullmatch(r"\d{6}", ticker):
