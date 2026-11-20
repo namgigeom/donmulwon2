@@ -212,7 +212,7 @@ def analyze_stock(ticker: str):
 @app.get("/api/us/stocks/{ticker}")
 def analyze_us_stock(ticker: str):
     """Analyze one NYSE/NASDAQ ticker using Yahoo Finance daily candles."""
-    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9.\\-]{0,14}", ticker):
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9.-]{0,14}", ticker):
         raise HTTPException(status_code=422, detail="미국 종목 티커 형식이 올바르지 않습니다.")
     try:
         from .us_market_scanner import analyze_us_ticker
