@@ -750,6 +750,9 @@ function App() {
             {([[nasdaqIndex, "나스닥 종합", "NASDAQ"], [sp500Index, "S&P 500", "S&P 500"]] as const).map(([index, label, tag]) => {
               const rising = (index?.change_pct ?? 0) > 0;
               const falling = (index?.change_pct ?? 0) < 0;
+              const values = index?.trend ?? [];
+              const min = Math.min(...values, 0), max = Math.max(...values, 1);
+              const points = values.map((value, i) => `${8 + i * (84 / Math.max(values.length - 1, 1))},${28 - ((value - min) / (max - min || 1)) * 22}`).join(" ");
               return <article className="market-card" key={tag}>
                 <div className="card-top"><span>{label}</span><span className="market-tag">US INDEX</span></div>
                 <div className="index-main"><div>
@@ -757,7 +760,10 @@ function App() {
                   <div className={rising ? "index-change positive" : falling ? "index-change negative" : "index-change neutral"}>
                     {index ? (index.change > 0 ? "+" : "") + index.change.toFixed(2) + " (" + (index.change_pct > 0 ? "+" : "") + index.change_pct.toFixed(2) + "%)" : "등락률 미수신"}
                   </div>
-                </div></div>
+                </div>
+                <svg className={rising ? "index-sparkline positive" : falling ? "index-sparkline negative" : "index-sparkline"} viewBox="0 0 100 32" role="img" aria-label={label + " 최근 지수 흐름"}>
+                  {values.length > 1 && <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
+                </svg></div>
                 <div className="market-foot"><span>{index?.date ?? usMarket?.date ?? "미국장 데이터 대기"}</span><span className="neutral-label">{index ? "수신" : "미수신"}</span></div>
               </article>;
             })}
