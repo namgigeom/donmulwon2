@@ -52,7 +52,7 @@ type MarketBulletin = {
   investor_flows?: { values?: Record<string, number> } | null;
 };
 
-type MarketCode = "ALL" | "KOSPI" | "KOSDAQ";
+type MarketCode = "ALL" | "KOSPI" | "KOSDAQ" | "US";
 type Candle = {
   date: string;
   "시가": number | null; "고가": number | null; "저가": number | null; "종가": number | null;
@@ -65,7 +65,7 @@ type Candle = {
 type CompanyProfile = { available:boolean; source?:string; symbol?:string; currency?:string; sector?:string; industry?:string; country?:string; website?:string; employees?:number|null; market_cap?:number|null; summary?:string; annual?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null;revenue_growth_pct?:number|null}|null; quarterly?:{period?:string;revenue?:number|null;operating_income?:number|null;net_income?:number|null}|null; outlook?:{rating?:string|null;target_mean_price?:number|null;target_upside_pct?:number|null;analyst_count?:number|null}|null; message?:string };
 type StockAnalysis = { ticker: string; name: string; trading_date: string; company?:CompanyProfile; signal?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; discovery?:{ready?:boolean;matched?:boolean;checks?:Record<string,boolean>;reason?:string}; weekly?:{ready?:boolean;grade?:string;grade_score?:number;grade_reason?:string;trend?:string;close?:number;ma10?:number}; latest?:{close?:number;change_pct?:number;trading_value?:number;ma10?:number;ma20?:number;ma60?:number;ma240?:number;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;volume_ratio?:number;atr14?:number;support20?:number;resistance20?:number;drawdown52w_pct?:number;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;reward_risk_1?:number;reward_risk_2?:number;warning?:string}}; ohlcv?: Candle[]; weekly_ohlcv?: Candle[] };
 type ScanMatch = { ticker:string; name:string; trading_date:string; scan_score?:number; scan_score_penalty?:number; scan_status?:"normal"|"ma240_below"|"ma240_unavailable"; scan_status_reason?:string; signal?:{checks?:Record<string,boolean>;timing?:"same_day"|"next_day_confirmed"|null;rsi10?:number;rsi14?:number;macd?:number;macd_signal?:number;close?:number;ma10?:number;volume_ratio?:number}; weekly?:{ready?:boolean;trend?:string;grade?:"A"|"B"|"C";grade_score?:number;grade_reason?:string}; latest?:{close?:number;change_pct?:number;trading_value?:number;volume_ratio?:number;ma240?:number|null;ma10?:number|null;support20?:number|null;resistance20?:number|null;atr14?:number|null;trade_plan?:{ready?:boolean;entry_low?:number;entry_high?:number;stop_loss?:number;target_1?:number;target_2?:number;warning?:string}}; };
-type ScanResult = { market:string; date:string; scanned:number; stage_counts?:{rsi:number;macd:number;ma10:number;trading_value:number;weekly_ma10:number}; matches:ScanMatch[]; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
+type ScanResult = { market:string; date:string; scanned:number; usdkrw?:number; daily_trading_value_min_krw?:number; avg20_trading_value_min_krw?:number; stage_counts?:{rsi:number;macd:number;ma10:number;trading_value:number;weekly_ma10:number}; matches:ScanMatch[]; grade_counts?:Record<"A"|"B"|"C",number>; error_count:number; errors?:{ticker:string;error:string}[]; };
 type ScanJob = { job_id:string; market:string; status:"running"|"completed"|"failed"; progress:number; total:number; current_ticker?:string|null; result?:ScanResult; error?:string; };
 
 
@@ -425,6 +425,7 @@ function App() {
   const [chartPeriod, setChartPeriod] = useState<"daily" | "weekly">("daily");
   const [tickerInput, setTickerInput] = useState("");
   const [selectedTicker, setSelectedTicker] = useState("");
+  const [selectedStockMarket, setSelectedStockMarket] = useState<"KR" | "US">("KR");
   const [stockAnalysis, setStockAnalysis] = useState<StockAnalysis | null>(null);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockError, setStockError] = useState("");
@@ -502,6 +503,7 @@ function App() {
 
   function openCandidate(item: Pick<ScanMatch, "ticker" | "name">) {
     setTickerInput(item.ticker);
+    setSelectedStockMarket(scanMarket === "US" ? "US" : "KR");
     setSelectedTicker(item.ticker);
     setChartPeriod("daily");
     setActivePage("stock-analysis");
@@ -586,7 +588,7 @@ function App() {
     async function loadStock() {
       setStockLoading(true); setStockError("");
       try {
-        const response = await fetch(apiBase + "/api/stocks/" + selectedTicker, { signal: controller.signal });
+        const response = await fetch(apiBase + (selectedStockMarket === "US" ? "/api/us/stocks/" : "/api/stocks/") + selectedTicker, { signal: controller.signal });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.detail || "종목 데이터를 불러오지 못했습니다.");
         setStockAnalysis(payload as StockAnalysis);
@@ -597,7 +599,7 @@ function App() {
     }
     void loadStock();
     return () => controller.abort();
-  }, [selectedTicker]);
+  }, [selectedTicker, selectedStockMarket]);
 
   const activeBars = chartPeriod === "daily" ? stockAnalysis?.ohlcv ?? [] : stockAnalysis?.weekly_ohlcv ?? [];
   const kospi = marketData.KOSPI;
@@ -816,9 +818,10 @@ function App() {
                 <button type="button" className={scanMarket === "ALL" ? "selected" : ""} onClick={() => setScanMarket("ALL")}>전체 시장</button>
                 <button type="button" className={scanMarket === "KOSPI" ? "selected" : ""} onClick={() => setScanMarket("KOSPI")}>코스피</button>
                 <button type="button" className={scanMarket === "KOSDAQ" ? "selected" : ""} onClick={() => setScanMarket("KOSDAQ")}>코스닥</button>
+                <button type="button" className={scanMarket === "US" ? "selected" : ""} onClick={() => setScanMarket("US")}>미국장</button>
               </div>
               <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "전체 종목 검색 시작"}</button>
-              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 정상 후보 {scanResult.matches.length}개 · 데이터 부족 {scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0}개 · A {scanResult.grade_counts?.A ?? 0} / B {scanResult.grade_counts?.B ?? 0} / C {scanResult.grade_counts?.C ?? 0} · 오류 {scanResult.error_count}건</span>}
+              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 정상 후보 {scanResult.matches.length}개{scanResult.market === "US" ? ` · USD/KRW ${scanResult.usdkrw ?? "—"}` : ""} · 데이터 부족 {scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0}개 · A {scanResult.grade_counts?.A ?? 0} / B {scanResult.grade_counts?.B ?? 0} / C {scanResult.grade_counts?.C ?? 0} · 오류 {scanResult.error_count}건</span>}
             </div>
             {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
             {scanError && <div className="scanner-state error">{scanError}</div>}
@@ -875,10 +878,10 @@ function App() {
                       return <tr key={item.ticker}>
                         <td><span className={`grade-badge grade-${(item.weekly?.grade ?? "C").toLowerCase()}`}>{item.weekly?.grade ?? "C"}</span><small>{item.scan_score ?? item.weekly?.grade_score ?? 0}점</small>{(item.scan_score_penalty ?? 0) > 0 && <small>-{item.scan_score_penalty}점</small>}</td>
                         <td><b>{item.name}</b><small>{item.ticker}</small><small>{item.signal?.timing === "same_day" ? "당일 골든크로스" : item.signal?.timing === "next_day_confirmed" ? "다음 날 추세 확인" : "신호 유형 확인 불가"}</small></td>
-                        <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}</td>
+                        <td>{item.latest?.close?.toLocaleString("ko-KR") ?? "—"}{scanResult.market === "US" ? " USD" : "원"}</td>
                         <td>{item.signal?.rsi10?.toFixed(1) ?? "—"} / {item.signal?.rsi14?.toFixed(1) ?? "—"}</td>
                         <td>{typeof item.latest?.volume_ratio === "number" ? item.latest.volume_ratio.toFixed(2) + "x" : "—"}</td>
-                        <td>{typeof item.latest?.trading_value === "number" ? Math.round(item.latest.trading_value).toLocaleString("ko-KR") + "원" : "자료 없음"}</td>
+                        <td>{typeof item.latest?.trading_value === "number" ? Math.round(item.latest.trading_value).toLocaleString("ko-KR") + "원 환산" : "자료 없음"}</td>
                         <td title={item.weekly?.grade_reason}>{item.weekly?.ready ? item.weekly.trend : "데이터 부족"}</td>
                         <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.entry_low ?? 0).toLocaleString("ko-KR")} ~ ${Math.round(item.latest.trade_plan.entry_high ?? 0).toLocaleString("ko-KR")}` : "산출 불가"}</td>
                         <td>{item.latest?.trade_plan?.ready ? `${Math.round(item.latest.trade_plan.stop_loss ?? 0).toLocaleString("ko-KR")} / ${Math.round(item.latest.trade_plan.target_1 ?? 0).toLocaleString("ko-KR")}` : "—"}</td>
