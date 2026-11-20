@@ -111,6 +111,7 @@ def scan_us_market(progress=None, limit: int | None = None) -> dict:
     symbols = [symbol.replace(".", "-") for symbol, _ in universe]
     names = {symbol.replace(".", "-"): name for symbol, name in universe}
     matches, errors = [], []
+    latest_scan_date = None
     stages = {"rsi": 0, "macd": 0, "ma10": 0, "trading_value": 0, "weekly_ma10": 0}
     total = len(symbols)
     # Batch downloads reduce Yahoo requests while keeping memory bounded.
@@ -138,6 +139,7 @@ def scan_us_market(progress=None, limit: int | None = None) -> dict:
                 frame = frame.loc[[idx.date() < today_us for idx in frame.index]]
                 if len(frame) < 260:
                     raise ValueError("확정 정규장 일봉 이력이 부족합니다.")
+                latest_scan_date = max(latest_scan_date or frame.index[-1].strftime("%Y-%m-%d"), frame.index[-1].strftime("%Y-%m-%d"))
                 indicators = calculate_indicators(frame)
                 signal = latest_signal(frame)
                 weekly_frame = resample_weekly_ohlcv(frame)
@@ -214,7 +216,7 @@ def scan_us_market(progress=None, limit: int | None = None) -> dict:
     ))
     grade_counts = {grade: sum(1 for item in matches if (item.get("weekly") or {}).get("grade") == grade) for grade in ("A", "B", "C")}
     return {
-        "market": "US", "date": max((item["trading_date"] for item in matches), default=datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+        "market": "US", "date": latest_scan_date or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "scanned": total, "stage_counts": stages, "matches": matches,
         "grade_counts": grade_counts, "error_count": len(errors), "errors": errors[:30],
         "exchange_scope": ["NASDAQ", "NYSE"], "currency": "USD",
@@ -272,7 +274,10 @@ def analyze_us_ticker(ticker: str) -> dict:
         weekly["grade"] = None
         weekly["grade_score"] = None
         weekly["grade_reason"] = "발굴 조건 미충족으로 A/B/C 등급 미부여 · " + (weekly.get("grade_reason") or "")
-    name = yf.Ticker(symbol).get_info().get("shortName") or symbol
+    try:
+        name = yf.Ticker(symbol).get_info().get("shortName") or symbol
+    except Exception:
+        name = symbol
     return {
         "ticker": symbol, "name": name, "trading_date": indicators.index[-1].strftime("%Y-%m-%d"),
         "currency": "USD", "exchange_scope": ["NASDAQ", "NYSE"], "usdkrw": round(fx, 2),
