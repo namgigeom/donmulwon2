@@ -110,7 +110,7 @@ def scan_us_market(progress=None, limit: int | None = None) -> dict:
     avg20_min_usd = 2_000_000_000 / fx
     symbols = [symbol.replace(".", "-") for symbol, _ in universe]
     names = {symbol.replace(".", "-"): name for symbol, name in universe}
-    matches, errors = [], []
+    matches, errors, data_insufficient = [], [], []
     latest_scan_date = None
     stages = {"rsi": 0, "macd": 0, "ma10": 0, "trading_value": 0, "weekly_ma10": 0}
     total = len(symbols)
@@ -131,20 +131,28 @@ def scan_us_market(progress=None, limit: int | None = None) -> dict:
         for offset, symbol in enumerate(batch, start=1):
             try:
                 frame = _to_frame(downloaded, symbol)
-                if len(frame) < 260:
-                    raise ValueError("MA240 및 기술지표 계산에 필요한 일봉 이력이 부족합니다.")
                 # Yahoo may include a partial current-session bar; retain only
                 # dates strictly before the current US calendar date (pre-market scan).
                 today_us = pd.Timestamp.now(tz="America/New_York").date()
                 frame = frame.loc[[idx.date() < today_us for idx in frame.index]]
-                if len(frame) < 260:
-                    raise ValueError("확정 정규장 일봉 이력이 부족합니다.")
+                if len(frame) < 2:
+                    data_insufficient.append({"ticker": symbol, "reason": "확정 정규장 일봉 데이터 없음 또는 부족"})
+                    continue
                 latest_scan_date = max(latest_scan_date or frame.index[-1].strftime("%Y-%m-%d"), frame.index[-1].strftime("%Y-%m-%d"))
                 indicators = calculate_indicators(frame)
                 signal = latest_signal(frame)
                 weekly_frame = resample_weekly_ohlcv(frame)
                 weekly_indicators = calculate_indicators(weekly_frame)
                 weekly = _weekly_summary(weekly_indicators)
+                # 260 sessions are required only to calculate MA240.
+                # This is not a discovery gate; candidates with sufficient
+                # daily and weekly indicators remain eligible with the -20 penalty.
+                if not signal.get("ready") or not weekly.get("ready"):
+                    data_insufficient.append({
+                        "ticker": symbol,
+                        "reason": signal.get("reason") or weekly.get("reason") or "필수 기술지표 데이터 부족",
+                    })
+                    continue
                 last = indicators.iloc[-1]
                 close = _number(last.get("종가"))
                 volume = _number(last.get("거래량"))
@@ -219,6 +227,8 @@ def scan_us_market(progress=None, limit: int | None = None) -> dict:
         "market": "US", "date": latest_scan_date or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "scanned": total, "stage_counts": stages, "matches": matches,
         "grade_counts": grade_counts, "error_count": len(errors), "errors": errors[:30],
+        "data_insufficient_count": len(data_insufficient),
+        "data_insufficient": data_insufficient[:30],
         "exchange_scope": ["NASDAQ", "NYSE"], "currency": "USD",
         "usdkrw": round(fx, 2), "daily_trading_value_min_krw": 500_000_000,
         "avg20_trading_value_min_krw": 2_000_000_000,
@@ -234,7 +244,7 @@ def analyze_us_ticker(ticker: str) -> dict:
     frame = _to_frame(history, symbol)
     today_us = pd.Timestamp.now(tz="America/New_York").date()
     frame = frame.loc[[idx.date() < today_us for idx in frame.index]]
-    if len(frame) < 260:
+    if len(frame) < 2:
         raise ValueError("미국장 확정 일봉 데이터가 부족합니다.")
     indicators = calculate_indicators(frame)
     weekly_indicators = calculate_indicators(resample_weekly_ohlcv(frame))
