@@ -207,7 +207,19 @@ def analyze_stock(ticker: str):
     return data
 
 
-@app.get("/api/stocks/{ticker}/rsi-debug")
+
+
+@app.get("/api/us/stocks/{ticker}")
+def analyze_us_stock(ticker: str):
+    """Analyze one NYSE/NASDAQ ticker using Yahoo Finance daily candles."""
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9.\\-]{0,14}", ticker):
+        raise HTTPException(status_code=422, detail="미국 종목 티커 형식이 올바르지 않습니다.")
+    try:
+        from .us_market_scanner import analyze_us_ticker
+        return analyze_us_ticker(ticker)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"미국 종목 데이터 조회 실패: {exc}") from exc
+\n\n@app.get("/api/stocks/{ticker}/rsi-debug")
 def debug_stock_rsi(ticker: str):
     """Expose candle provenance and recent RSI inputs for troubleshooting."""
     if not re.fullmatch(r"\d{6}", ticker):
