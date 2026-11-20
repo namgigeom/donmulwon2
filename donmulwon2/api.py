@@ -81,8 +81,8 @@ async def block_toss_account_routes_in_share_mode(request, call_next):
 
 def _market_name(market: str) -> str:
     normalized = market.upper()
-    if normalized not in {"KOSPI", "KOSDAQ", "ALL"}:
-        raise HTTPException(status_code=404, detail="market must be ALL, KOSPI or KOSDAQ")
+    if normalized not in {"KOSPI", "KOSDAQ", "ALL", "US"}:
+        raise HTTPException(status_code=404, detail="market must be ALL, KOSPI, KOSDAQ or US")
     return normalized
 
 
