@@ -166,10 +166,10 @@ def scan_us_market(progress=None, limit: int | None = None) -> dict:
                     "macd_cross_and_rising": bool(checks.get("macd_cross_and_rising")),
                     "ma10_breakout": bool(checks.get("ma10_breakout")),
                     "trading_value_min": trading_value_usd is not None and trading_value_usd * fx >= 500_000_000,
-                    "avg20_trading_value_min": avg20_usd is not None and avg20_usd * fx >= 2_000_000_000,
                     "weekly_close_above_ma10": weekly.get("close") is not None and weekly.get("ma10") is not None and weekly["close"] > weekly["ma10"],
                 }
-                if not all(checks_out.values()) or not weekly.get("ready"):
+                avg20_liquidity_ok = avg20_usd is not None and avg20_usd * fx >= 2_000_000_000
+                if not all(checks_out.values()) or not avg20_liquidity_ok or not weekly.get("ready"):
                     continue
                 ma240 = _number(last.get("MA240"))
                 weekly_score = int(weekly.get("grade_score") or 0)
