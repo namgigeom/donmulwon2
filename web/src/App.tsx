@@ -157,13 +157,6 @@ function buildCompanyOutlook(company?: CompanyProfile) {
   return parts.join(", ") + ". 향후 성장 지속 여부는 신규 사업의 매출 기여와 영업이익 개선을 함께 확인해야 합니다.";
 }
 
-function formatCompanyPrice(value: number | null | undefined, currency?: string) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "자료 없음";
-  return currency === "KRW"
-    ? Math.round(value).toLocaleString("ko-KR") + "원"
-    : new Intl.NumberFormat("ko-KR", { style: "currency", currency: currency || "USD", maximumFractionDigits: 2 }).format(value);
-}
-
 function buildMarketNarrative(kospi?: MarketBulletin, kosdaq?: MarketBulletin) {
   if (!kospi || !kosdaq) return "코스피·코스닥 지수와 업종·수급 데이터를 모두 받은 뒤 장세를 요약합니다.";
 
@@ -821,7 +814,7 @@ function App() {
                 <button type="button" className={scanMarket === "US" ? "selected" : ""} onClick={() => setScanMarket("US")}>미국장</button>
               </div>
               <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "전체 종목 검색 시작"}</button>
-              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 정상 후보 {scanResult.matches.length}개{scanResult.market === "US" ? ` · USD/KRW ${scanResult.usdkrw ?? "—"}` : ""} · 데이터 부족 {scanResult.data_insufficient_count ?? scanResult.data_insufficient?.length ?? 0}개 · A {scanResult.grade_counts?.A ?? 0} / B {scanResult.grade_counts?.B ?? 0} / C {scanResult.grade_counts?.C ?? 0} · 오류 {scanResult.error_count}건</span>}
+              {scanResult && <span className="scan-meta">{scanResult.date} · {scanResult.scanned.toLocaleString("ko-KR")}종목 검사 · 정상 후보 {scanResult.matches.length}개{scanResult.market === "US" ? ` · USD/KRW ${scanResult.usdkrw ?? "—"}` : ""} · A {scanResult.grade_counts?.A ?? 0} / B {scanResult.grade_counts?.B ?? 0} / C {scanResult.grade_counts?.C ?? 0} · 오류 {scanResult.error_count}건</span>}
             </div>
             {scanLoading && <div className="scanner-state"><span className="loading-pulse" /> {scanProgress && scanProgress.total > 0 ? `진행 ${scanProgress.progress.toLocaleString("ko-KR")} / ${scanProgress.total.toLocaleString("ko-KR")} · 현재 종목 ${scanProgress.current_ticker ?? "준비 중"}` : "시장 종목 목록을 준비하고 있습니다."}</div>}
             {scanError && <div className="scanner-state error">{scanError}</div>}
