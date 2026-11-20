@@ -160,7 +160,7 @@ def us_market_bulletin(force_refresh: bool = False) -> dict:
         }
         result["one_line_summary"] = (
             f"미국 시장: 상승 {breadth['advancers']:,} / 하락 {breadth['decliners']:,}, "
-            f"거래대금 \${breadth['trading_value'] / 1_000_000_000:.1f}B"
+            f"거래대금 ${breadth['trading_value'] / 1_000_000_000:.1f}B"
         )
         _CACHE, _CACHE_AT = result, time_module.time()
         return dict(result)
