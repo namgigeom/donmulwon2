@@ -812,7 +812,7 @@ function App() {
               <div><span className="section-kicker">RULE-BASED DISCOVERY</span><h2>시장 스캐너</h2></div>
               <span className="single-agent">DAILY SIGNAL · CLOSE CONFIRMED</span>
             </div>
-            <p className="scanner-intro">일봉 필수 조건, 240일선 필터, 주봉 종가의 주봉 MA10 상회 조건을 모두 통과한 종목만 표시합니다. 통과 종목은 주봉 추세 점수로 A·B·C 등급화해 A부터 정렬합니다.</p>
+            <p className="scanner-intro">{scanMarket === "US" ? "NYSE·NASDAQ 보통주 대상. 직전 정규장 확정 일봉으로 기존 5개 발굴 조건을 검사하고, 당일 거래대금 5억 원 및 20거래일 평균 거래대금 20억 원 필터를 추가 적용합니다. A/B/C 등급과 MA240 감점은 기존 규칙을 따릅니다." : "일봉 필수 조건과 주봉 종가의 주봉 MA10 상회 조건을 모두 통과한 종목만 표시합니다. 통과 종목은 주봉 추세 점수로 A·B·C 등급화하고 MA240 상태는 별도 감점합니다."}</p>
             <div className="scanner-toolbar">
               <div className="period-toggle">
                 <button type="button" className={scanMarket === "ALL" ? "selected" : ""} onClick={() => setScanMarket("ALL")}>전체 시장</button>
