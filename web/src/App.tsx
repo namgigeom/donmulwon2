@@ -40,16 +40,13 @@ const marketNav: NavItem[] = [
 ];
 
 
+type MarketIndex = { name: string; close: number; change: number; change_pct: number; trend: number[]; date?: string };
 type MarketBulletin = {
-  date: string;
-  advancers: number;
-  decliners: number;
-  unchanged: number;
-  ticker_count: number;
-  trading_value: number;
-  index?: { name: string; close: number; change: number; change_pct: number; trend: number[] } | null;
-  sectors?: { name: string; change_pct: number; stock_count: number; market: string }[];
-  investor_flows?: { values?: Record<string, number> } | null;
+  date: string; advancers: number; decliners: number; unchanged: number; ticker_count: number; trading_value: number;
+  currency?: "USD" | "KRW"; index?: MarketIndex | null; indexes?: { nasdaq?: MarketIndex; sp500?: MarketIndex };
+  sectors?: { name: string; ticker?: string; change_pct: number; stock_count: number; market: string }[];
+  investor_flows?: { values?: Record<string, number> } | null; investor_flow_status?: string; breadth_scope?: string;
+  universe_count?: number; coverage_pct?: number; error_count?: number; source?: string;
 };
 
 type MarketCode = "ALL" | "KOSPI" | "KOSDAQ" | "US";
@@ -74,9 +71,25 @@ function formatCount(value: number | undefined) {
 }
 
 function formatTradingValue(value: number | undefined) {
-  return typeof value === "number"
-    ? `${(value / 100000000).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}억`
-    : "—";
+  return typeof value === "number" ? `${(value / 100000000).toLocaleString("ko-KR", { maximumFractionDigits: 0 })}억` : "—";
+}
+
+function formatUsdTradingValue(value: number | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  const billions = value / 1_000_000_000;
+  return billions >= 1 ? "$" + billions.toLocaleString("en-US", { maximumFractionDigits: 1 }) + "B" : "$" + (value / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "M";
+}
+
+function buildUsMarketNarrative(data?: MarketBulletin) {
+  if (!data?.indexes?.nasdaq || !data?.indexes?.sp500) return "미국 지수와 시장 폭 데이터를 수신하면 종합 흐름을 표시합니다.";
+  const nasdaq = data.indexes.nasdaq;
+  const sp500 = data.indexes.sp500;
+  const breadth = data.advancers > data.decliners ? "상승 종목이 하락 종목보다 많아 시장 참여 폭이 양호합니다." : data.advancers < data.decliners ? "하락 종목이 우세해 지수 상승 여부와 별개로 시장 내부 체력을 주의해서 봐야 합니다." : "상승·하락 종목 수가 비슷해 시장 폭은 중립적입니다.";
+  const indexMood = nasdaq.change_pct > 0 && sp500.change_pct > 0 ? "나스닥과 S&P 500이 동반 상승했습니다." : nasdaq.change_pct < 0 && sp500.change_pct < 0 ? "나스닥과 S&P 500이 동반 하락했습니다." : "나스닥과 S&P 500의 방향이 엇갈렸습니다.";
+  const leaders = [...(data.sectors ?? [])].sort((a, b) => b.change_pct - a.change_pct)[0];
+  const laggards = [...(data.sectors ?? [])].sort((a, b) => a.change_pct - b.change_pct)[0];
+  const sectorText = leaders && laggards ? "업종은 " + leaders.name + "(" + (leaders.change_pct > 0 ? "+" : "") + leaders.change_pct.toFixed(2) + "%)가 상대 강세, " + laggards.name + "(" + (laggards.change_pct > 0 ? "+" : "") + laggards.change_pct.toFixed(2) + "%)가 상대 약세였습니다." : "";
+  return indexMood + " " + breadth + " " + sectorText + " 거래대금은 " + formatUsdTradingValue(data.trading_value) + "이며, " + (data.coverage_pct ?? 0) + "% 종목 데이터 기준입니다.";
 }
 
 function formatCompanyMoney(value: number | null | undefined, currency?: string) {
@@ -513,7 +526,7 @@ function App() {
         if (!healthResponse.ok) throw new Error("API health check failed");
         setApiStatus("Python API 연결됨");
 
-        const codes: MarketCode[] = ["KOSPI", "KOSDAQ"];
+        const codes: MarketCode[] = ["KOSPI", "KOSDAQ", "US"];
         const results = await Promise.allSettled(
           codes.map(async (code) => {
             const response = await fetch(apiBase + "/api/market/" + code + "/bulletin", {
@@ -529,7 +542,7 @@ function App() {
           if (result.status === "fulfilled") next[result.value[0]] = result.value[1] as MarketBulletin;
         });
         setMarketData(next);
-        if (Object.keys(next).length === 2) {
+        if (next.KOSPI && next.KOSDAQ) {
           try {
             const noteResponse = await fetch(apiBase + "/api/market/raccoon-note", { signal: controller.signal });
             const notePayload = await noteResponse.json();
@@ -542,8 +555,8 @@ function App() {
         } else {
           setRaccoonNote({ status: "error", error: "코스피·코스닥 시장 데이터가 모두 필요합니다." });
         }
-        if (Object.keys(next).length === 0) setApiStatus("KRX 데이터 미수신");
-        else if (Object.keys(next).length < 2) setApiStatus("일부 시장 데이터 미수신");
+        if (!next.KOSPI && !next.KOSDAQ && !next.US) setApiStatus("시장 데이터 미수신");
+        else if (!next.KOSPI || !next.KOSDAQ) setApiStatus("일부 국내 시장 데이터 미수신");
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") return;
         setApiStatus("Python API 연결 실패");
@@ -597,6 +610,9 @@ function App() {
   const activeBars = chartPeriod === "daily" ? stockAnalysis?.ohlcv ?? [] : stockAnalysis?.weekly_ohlcv ?? [];
   const kospi = marketData.KOSPI;
   const kosdaq = marketData.KOSDAQ;
+  const usMarket = marketData.US;
+  const nasdaqIndex = usMarket?.indexes?.nasdaq;
+  const sp500Index = usMarket?.indexes?.sp500;
   const bothMarketsReady = Boolean(kospi && kosdaq);
   const totalAdvancers = kospi && kosdaq ? kospi.advancers + kosdaq.advancers : undefined;
   const totalDecliners = kospi && kosdaq ? kospi.decliners + kosdaq.decliners : undefined;
@@ -604,6 +620,9 @@ function App() {
   const sectors = [ ...(kospi?.sectors ?? []), ...(kosdaq?.sectors ?? []) ];
   const strongestSectors = [...sectors].sort((a, b) => b.change_pct - a.change_pct).filter((item) => item.change_pct > 0).slice(0, 5);
   const weakestSectors = [...sectors].sort((a, b) => a.change_pct - b.change_pct).filter((item) => item.change_pct < 0).slice(0, 5);
+  const usSectors = usMarket?.sectors ?? [];
+  const strongestUsSectors = [...usSectors].filter((item) => item.change_pct > 0).slice(0, 5);
+  const weakestUsSectors = [...usSectors].filter((item) => item.change_pct < 0).slice(-5).reverse();
   const investorFlows: Record<string, number> = {};
   for (const bulletin of [kospi, kosdaq]) {
     for (const [name, value] of Object.entries(bulletin?.investor_flows?.values ?? {})) {
