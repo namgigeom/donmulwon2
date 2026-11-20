@@ -543,6 +543,20 @@ function App() {
           if (result.status === "fulfilled") domesticNext[result.value[0]] = result.value[1] as MarketBulletin;
         });
         setMarketData((current) => ({ ...current, ...domesticNext }));
+        setUsMarketStatus("미국장 데이터 수집 중 · 첫 조회는 시간이 걸릴 수 있습니다.");
+        fetch(apiBase + "/api/market/US/bulletin", { signal: controller.signal })
+          .then(async (response) => {
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail || "미국 시장 데이터를 불러오지 못했습니다.");
+            if (!controller.signal.aborted) {
+              setMarketData((current) => ({ ...current, US: payload as MarketBulletin }));
+              setUsMarketStatus("미국장 데이터 수신 완료");
+            }
+          })
+          .catch((usError) => {
+            if (usError instanceof Error && usError.name === "AbortError") return;
+            if (!controller.signal.aborted) setUsMarketStatus(usError instanceof Error ? "미국장 데이터 오류 · " + usError.message : "미국장 데이터 조회 실패");
+          });
         if (domesticNext.KOSPI && domesticNext.KOSDAQ) {
           try {
             const noteResponse = await fetch(apiBase + "/api/market/raccoon-note", { signal: controller.signal });
@@ -559,20 +573,6 @@ function App() {
         if (!domesticNext.KOSPI && !domesticNext.KOSDAQ) setApiStatus("국내 시장 데이터 미수신");
         else if (!domesticNext.KOSPI || !domesticNext.KOSDAQ) setApiStatus("일부 국내 시장 데이터 미수신");
 
-        setUsMarketStatus("미국장 데이터 수집 중 · 첫 조회는 시간이 걸릴 수 있습니다.");
-        fetch(apiBase + "/api/market/US/bulletin", { signal: controller.signal })
-          .then(async (response) => {
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.detail || "미국 시장 데이터를 불러오지 못했습니다.");
-            if (!controller.signal.aborted) {
-              setMarketData((current) => ({ ...current, US: payload as MarketBulletin }));
-              setUsMarketStatus("미국장 데이터 수신 완료");
-            }
-          })
-          .catch((usError) => {
-            if (usError instanceof Error && usError.name === "AbortError") return;
-            if (!controller.signal.aborted) setUsMarketStatus(usError instanceof Error ? "미국장 데이터 오류 · " + usError.message : "미국장 데이터 조회 실패");
-          });
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") return;
         setApiStatus("Python API 연결 실패");
