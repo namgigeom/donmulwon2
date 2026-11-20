@@ -747,6 +747,30 @@ function App() {
               <div className="market-value">{formatTradingValue(totalTradingValue)}</div>
               <div className="market-foot"><span>KOSPI + KOSDAQ 거래대금</span><span className="neutral-label">{bothMarketsReady ? "수신" : "미수신"}</span></div>
             </article>
+            {([[nasdaqIndex, "나스닥 종합", "NASDAQ"], [sp500Index, "S&P 500", "S&P 500"]] as const).map(([index, label, tag]) => {
+              const rising = (index?.change_pct ?? 0) > 0;
+              const falling = (index?.change_pct ?? 0) < 0;
+              return <article className="market-card" key={tag}>
+                <div className="card-top"><span>{label}</span><span className="market-tag">US INDEX</span></div>
+                <div className="index-main"><div>
+                  <div className="index-close">{index ? index.close.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "데이터 대기"}</div>
+                  <div className={rising ? "index-change positive" : falling ? "index-change negative" : "index-change neutral"}>
+                    {index ? (index.change > 0 ? "+" : "") + index.change.toFixed(2) + " (" + (index.change_pct > 0 ? "+" : "") + index.change_pct.toFixed(2) + "%)" : "등락률 미수신"}
+                  </div>
+                </div></div>
+                <div className="market-foot"><span>{index?.date ?? usMarket?.date ?? "미국장 데이터 대기"}</span><span className="neutral-label">{index ? "수신" : "미수신"}</span></div>
+              </article>;
+            })}
+            <article className="market-card accent-card">
+              <div className="card-top"><span>미국 시장 상승·하락 종목 수</span><Activity size={16} /></div>
+              <div className="market-value">{formatCount(usMarket?.advancers)} <small>/ {formatCount(usMarket?.decliners)}</small></div>
+              <div className="market-foot"><span>{usMarket?.breadth_scope ?? "NYSE + NASDAQ"}</span><span className="neutral-label">{usMarket ? "수신" : "미수신"}</span></div>
+            </article>
+            <article className="market-card">
+              <div className="card-top"><span>US TRADING VALUE</span><BarChart3 size={16} /></div>
+              <div className="market-value">{formatUsdTradingValue(usMarket?.trading_value)}</div>
+              <div className="market-foot"><span>NYSE + NASDAQ 거래대금</span><span className="neutral-label">{usMarket ? "수신" : "미수신"}</span></div>
+            </article>
           </section>
 
           <section className="office-layout">
