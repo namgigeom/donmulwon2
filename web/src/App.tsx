@@ -503,7 +503,7 @@ function App() {
 
   function openCandidate(item: Pick<ScanMatch, "ticker" | "name">) {
     setTickerInput(item.ticker);
-    setSelectedStockMarket(scanMarket === "US" ? "US" : "KR");
+    setSelectedStockMarket(scanResult?.market === "US" ? "US" : "KR");
     setSelectedTicker(item.ticker);
     setChartPeriod("daily");
     setActivePage("stock-analysis");
