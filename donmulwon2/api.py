@@ -172,8 +172,14 @@ def request_shutdown():
 
 @app.get("/api/market/{market}/bulletin")
 def market_bulletin(market: str):
-    """Return the latest KRX breadth, trading value and investor-flow bulletin."""
+    """Return the latest domestic or US market breadth, index and sector bulletin."""
     selected = _market_name(market)
+    if selected == "US":
+        try:
+            from .us_market_data import us_market_bulletin
+            return us_market_bulletin()
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"미국 시장 데이터 조회 실패: {exc}") from exc
     analyzer = DonmulwonAnalyzer()
     return _require_success(analyzer.market_bulletin(selected))
 
