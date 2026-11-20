@@ -221,3 +221,74 @@ def scan_us_market(progress=None, limit: int | None = None) -> dict:
         "usdkrw": round(fx, 2), "daily_trading_value_min_krw": 500_000_000,
         "avg20_trading_value_min_krw": 2_000_000_000,
     }
+
+
+def analyze_us_ticker(ticker: str) -> dict:
+    """Return a chart-compatible technical analysis payload for one US ticker."""
+    import yfinance as yf
+    from .analyzer import _number, _trade_plan, _weekly_summary
+    symbol = ticker.replace(".", "-").upper()
+    history = yf.Ticker(symbol).history(period="2y", interval="1d", auto_adjust=True)
+    frame = _to_frame(history, symbol)
+    today_us = pd.Timestamp.now(tz="America/New_York").date()
+    frame = frame.loc[[idx.date() < today_us for idx in frame.index]]
+    if len(frame) < 260:
+        raise ValueError("미국장 확정 일봉 데이터가 부족합니다.")
+    indicators = calculate_indicators(frame)
+    weekly_indicators = calculate_indicators(resample_weekly_ohlcv(frame))
+    signal = latest_signal(frame)
+    weekly = _weekly_summary(weekly_indicators)
+    last = indicators.iloc[-1]
+    previous = indicators.iloc[-2]
+    close = _number(last.get("종가"))
+    volume = _number(last.get("거래량"))
+    fx = _usdkrw_rate()
+    trading_value_usd = close * volume if close is not None and volume is not None else None
+    change_pct = (close / _number(previous.get("종가")) - 1) * 100 if close and _number(previous.get("종가")) else None
+
+    def records(data):
+        output = []
+        for index, row in data.tail(130).iterrows():
+            item = {"date": index.strftime("%Y-%m-%d")}
+            for key in ("시가", "고가", "저가", "종가", "거래량", "MA10", "MA20", "MA60", "MA240", "BB_UPPER", "BB_MIDDLE", "BB_LOWER", "MACD", "MACD_SIGNAL", "MACD_HIST", "RSI10", "RSI14"):
+                value = _number(row.get(key))
+                item[key] = value
+            output.append(item)
+        return output
+
+    checks = signal.get("checks") or {}
+    trading_ok = trading_value_usd is not None and trading_value_usd * fx >= 500_000_000
+    weekly_ok = weekly.get("close") is not None and weekly.get("ma10") is not None and weekly["close"] > weekly["ma10"]
+    discovery_checks = {
+        "rsi_cross_and_rising": bool(checks.get("rsi_cross_and_rising")),
+        "macd_cross_and_rising": bool(checks.get("macd_cross_and_rising")),
+        "ma10_breakout": bool(checks.get("ma10_breakout")),
+        "trading_value_min": trading_ok,
+        "weekly_close_above_ma10": weekly_ok,
+    }
+    matched = all(discovery_checks.values()) and weekly.get("ready") is True
+    if not matched:
+        weekly = dict(weekly)
+        weekly["grade"] = None
+        weekly["grade_score"] = None
+        weekly["grade_reason"] = "발굴 조건 미충족으로 A/B/C 등급 미부여 · " + (weekly.get("grade_reason") or "")
+    name = yf.Ticker(symbol).get_info().get("shortName") or symbol
+    return {
+        "ticker": symbol, "name": name, "trading_date": indicators.index[-1].strftime("%Y-%m-%d"),
+        "currency": "USD", "exchange_scope": ["NASDAQ", "NYSE"], "usdkrw": round(fx, 2),
+        "signal": signal, "discovery": {"ready": True, "checks": discovery_checks, "matched": matched},
+        "matched": matched, "weekly": weekly, "weekly_ohlcv": records(weekly_indicators.tail(52)),
+        "latest": {
+            "close": close, "change_pct": change_pct, "volume": volume,
+            "trading_value": trading_value_usd * fx if trading_value_usd is not None else None,
+            "trading_value_usd": trading_value_usd, "ma10": _number(last.get("MA10")),
+            "ma20": _number(last.get("MA20")), "ma60": _number(last.get("MA60")),
+            "ma240": _number(last.get("MA240")), "rsi10": _number(last.get("RSI10")),
+            "rsi14": _number(last.get("RSI14")), "macd": _number(last.get("MACD")),
+            "macd_signal": _number(last.get("MACD_SIGNAL")), "macd_hist": _number(last.get("MACD_HIST")),
+            "volume_ratio": volume / _number(last.get("VOLUME_MA10")) if volume and _number(last.get("VOLUME_MA10")) else None,
+            "atr14": _number(last.get("ATR14")), "support20": _number(last.get("LOW20")),
+            "resistance20": _number(last.get("HIGH20")), "trade_plan": _trade_plan(close, _number(last.get("ATR14"))),
+        },
+        "ohlcv": records(indicators),
+    }
