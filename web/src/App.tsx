@@ -76,7 +76,9 @@ function formatTradingValue(value: number | undefined) {
 
 function formatUsdTradingValue(value: number | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  const trillions = value / 1_000_000_000_000;
   const billions = value / 1_000_000_000;
+  if (trillions >= 1) return "$" + trillions.toLocaleString("en-US", { maximumFractionDigits: 2 }) + "T";
   return billions >= 1 ? "$" + billions.toLocaleString("en-US", { maximumFractionDigits: 1 }) + "B" : "$" + (value / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "M";
 }
 
