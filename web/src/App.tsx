@@ -980,7 +980,7 @@ function App() {
           <footer className="page-footer"><span>© 2026 DONMULWON 2</span><span>DATA FIRST · RISK AWARE · NO AUTO TRADING</span></footer>
           </>}
           {activePage === "market-analysis" && <section className="market-analysis-page">
-            <div className="page-title-row"><div><span className="section-kicker">GLOBAL & KOREA MARKET INTELLIGENCE</span><h1>종합 시장분석실</h1><p>확인 가능한 국내 시장 데이터와 AI 해석을 한곳에서 점검합니다.</p></div><span className="history-retention">KRX · {kospi?.date ?? kosdaq?.date ?? "데이터 대기"}</span></div>
+            <div className="page-title-row"><div><span className="section-kicker">GLOBAL & KOREA MARKET INTELLIGENCE</span><h1>종합 시장분석실</h1><p>국내 KRX와 미국 NYSE·NASDAQ 시장 데이터를 함께 점검합니다.</p></div><span className="history-retention">KRX {kospi?.date ?? kosdaq?.date ?? "—"} · US {usMarket?.date ?? "데이터 대기"}</span></div>
             <div className="market-grid market-analysis-summary">
               {([["KOSPI","코스피",kospi],["KOSDAQ","코스닥",kosdaq]] as const).map(([code,label,data]) => {
                 const index=data?.index; const rising=(index?.change_pct ?? 0)>0; const falling=(index?.change_pct ?? 0)<0;
@@ -992,6 +992,14 @@ function App() {
               })}
               <article className="market-card accent-card"><div className="card-top"><span>시장 breadth</span><Activity size={16}/></div><div className="market-value">{formatCount(totalAdvancers)} <small>/ {formatCount(totalDecliners)}</small></div><div className="market-foot"><span>코스피 + 코스닥 상승 / 하락</span><span className="neutral-label">{bothMarketsReady ? "수신" : "부분 수신"}</span></div></article>
               <article className="market-card"><div className="card-top"><span>총 거래대금</span><BarChart3 size={16}/></div><div className="market-value">{formatTradingValue(totalTradingValue)}</div><div className="market-foot"><span>코스피 + 코스닥</span><span className="neutral-label">{bothMarketsReady ? "수신" : "부분 수신"}</span></div></article>
+              {([[nasdaqIndex, "나스닥 종합"], [sp500Index, "S&P 500"]] as const).map(([index, label]) => <article className="market-card" key={label}>
+                <div className="card-top"><span>{label}</span><span className="market-tag">US INDEX</span></div>
+                <div className="market-value">{index ? index.close.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—"}</div>
+                <div className={index && index.change_pct > 0 ? "index-change positive" : index && index.change_pct < 0 ? "index-change negative" : "index-change neutral"}>{index ? (index.change > 0 ? "+" : "") + index.change.toFixed(2) + " (" + (index.change_pct > 0 ? "+" : "") + index.change_pct.toFixed(2) + "%)" : "지수 데이터 미수신"}</div>
+                <div className="market-foot"><span>{index?.date ?? "미수신"}</span><span className="neutral-label">{index ? "수신" : "미수신"}</span></div>
+              </article>)}
+              <article className="market-card accent-card"><div className="card-top"><span>미국 시장 breadth</span><Activity size={16}/></div><div className="market-value">{formatCount(usMarket?.advancers)} <small>/ {formatCount(usMarket?.decliners)}</small></div><div className="market-foot"><span>{usMarket?.breadth_scope ?? "NYSE + NASDAQ"}</span><span className="neutral-label">{usMarket ? "수신" : "미수신"}</span></div></article>
+              <article className="market-card"><div className="card-top"><span>미국 총 거래대금</span><BarChart3 size={16}/></div><div className="market-value">{formatUsdTradingValue(usMarket?.trading_value)}</div><div className="market-foot"><span>NYSE + NASDAQ · USD</span><span className="neutral-label">{usMarket ? "수신" : "미수신"}</span></div></article>
             </div>
             <article className="panel market-ai-brief">
               <div className="section-heading compact"><div><span className="section-kicker">AI MARKET INTERPRETATION</span><h2>너구리의 시장 종합 의견</h2></div><span className="single-agent">{raccoonNote.status === "ready" ? "AI ANALYSIS READY" : raccoonNote.status === "loading" ? "ANALYZING" : "ANALYSIS UNAVAILABLE"}</span></div>
@@ -1006,10 +1014,23 @@ function App() {
                 {weakestSectors.length ? <ul className="sector-list">{weakestSectors.map((sector)=><li key={sector.market+sector.name}><span>{sector.name}<small>{sector.market==="KOSPI"?"코스피":"코스닥"} · {sector.stock_count}종목</small></span><b className="negative">{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="scanner-state">하락 업종 데이터가 없습니다.</div>}
               </article>
             </div>
-            <article className="panel market-flows-panel"><div className="section-heading compact"><div><span className="section-kicker">INVESTOR POSITIONING</span><h2>투자자별 수급</h2></div><Activity size={17}/></div>
+            <article className="panel market-ai-brief">
+              <div className="section-heading compact"><div><span className="section-kicker">US MARKET IN ONE LINE</span><h2>미국 시장 종합 요약</h2></div><span className="single-agent">{usMarket ? "YAHOO FINANCE DATA" : "DATA PENDING"}</span></div>
+              <p className="market-ai-note">{buildUsMarketNarrative(usMarket)}</p>
+              <div className="market-foot"><span>기준일 · {usMarket?.date ?? "—"}</span><span>데이터 커버리지 {usMarket?.coverage_pct ?? 0}%</span></div>
+            </article>
+            <div className="market-analysis-columns">
+              <article className="panel"><div className="section-heading compact"><div><span className="section-kicker">US SECTOR LEADERS</span><h2>미국 강세 업종 TOP 5</h2></div><Flame size={17}/></div>
+                {strongestUsSectors.length ? <ul className="sector-list">{strongestUsSectors.map((sector)=><li key={sector.ticker ?? sector.name}><span>{sector.name}<small>{sector.ticker} · 섹터 ETF</small></span><b className="positive">+{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="scanner-state">미국 업종 데이터 수신 대기 또는 상승 업종 없음</div>}
+              </article>
+              <article className="panel"><div className="section-heading compact"><div><span className="section-kicker">US SECTOR LAGGARDS</span><h2>미국 약세 업종 TOP 5</h2></div><ShieldAlert size={17}/></div>
+                {weakestUsSectors.length ? <ul className="sector-list">{weakestUsSectors.map((sector)=><li key={sector.ticker ?? sector.name}><span>{sector.name}<small>{sector.ticker} · 섹터 ETF</small></span><b className="negative">{sector.change_pct.toFixed(2)}%</b></li>)}</ul> : <div className="scanner-state">미국 업종 데이터 수신 대기 또는 하락 업종 없음</div>}
+              </article>
+            </div>
+            <article className="panel market-flows-panel"><div className="section-heading compact"><div><span className="section-kicker">KRX INVESTOR POSITIONING</span><h2>국내 투자자별 수급</h2></div><Activity size={17}/></div>
               {Object.keys(investorFlows).length ? <div className="market-flow-grid">{Object.entries(investorFlows).map(([name,value])=><div key={name}><small>{name}</small><b className={value>0?"positive":value<0?"negative":""}>{value>0?"+":""}{value.toLocaleString("ko-KR")}원</b></div>)}</div> : <div className="scanner-state">투자자별 수급 데이터가 제공되지 않았습니다.</div>}
             </article>
-            <article className="panel market-coverage-note"><b>데이터 범위 안내</b><p>현재 연동된 실시간 분석 데이터는 코스피·코스닥 중심입니다. 미국 지수와 글로벌 거시지표는 아직 데이터 공급이 연결되지 않아 이 화면에서 임의의 수치를 표시하지 않습니다.</p><p>시장 방향은 지수 등락뿐 아니라 상승·하락 종목 수, 업종 확산, 투자자 수급을 함께 확인해야 합니다.</p></article>
+            <article className="panel market-coverage-note"><b>데이터 범위 및 한계</b><p>국내 시장은 KRX 데이터, 미국 시장은 Yahoo Finance 일봉과 NasdaqTrader 상장 종목 목록을 사용합니다. 미국 breadth와 거래대금은 NYSE·NASDAQ 보통주 중 실제 일봉을 받은 종목 기준이며, 데이터 커버리지를 함께 표시합니다.</p><p>미국 투자자별 순매수 통계는 현재 무료 데이터 경로에서 제공되지 않아 표시하지 않습니다. 미국 강세·약세 업종은 11개 S&P 섹터 ETF의 전일 대비 등락률입니다.</p></article>
           </section>}
           {activePage === "stock-analysis" && <section className="stock-analysis-page">
             <div className="page-title-row"><div><span className="section-kicker">DEEP TECHNICAL ANALYSIS</span><h1>종목 분석</h1><p>너구리 분석실과 분리된 종목 전용 분석 화면입니다.</p></div><span className="single-agent">DAILY · WEEKLY · RISK PLAN</span></div>
