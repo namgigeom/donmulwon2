@@ -98,7 +98,7 @@ def _breadth_and_turnover(end_date: pd.Timestamp) -> dict:
         try:
             downloaded = yf.download(
                 tickers=batch, period="10d", interval="1d", group_by="ticker",
-                auto_adjust=True, actions=False, threads=True, progress=False, timeout=25,
+                auto_adjust=False, actions=False, threads=True, progress=False, timeout=25,
             )
         except Exception:
             errors += len(batch)
@@ -115,7 +115,8 @@ def _breadth_and_turnover(end_date: pd.Timestamp) -> dict:
                 continue
             previous = float(frame["종가"].iloc[-2])
             latest = float(frame["종가"].iloc[-1])
-            volume = float(frame["거래량"].iloc[-1])
+            volume_raw = frame["거래량"].iloc[-1]
+            volume = float(volume_raw) if pd.notna(volume_raw) else 0.0
             if previous <= 0:
                 errors += 1
                 continue
