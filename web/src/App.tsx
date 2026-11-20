@@ -786,12 +786,12 @@ function App() {
             <article className="market-card accent-card">
               <div className="card-top"><span>미국 시장 상승·하락 종목 수</span><Activity size={16} /></div>
               <div className="market-value">{formatCount(usMarket?.advancers)} <small>/ {formatCount(usMarket?.decliners)}</small></div>
-              <div className="market-foot"><span>{usMarket?.breadth_scope ?? "NYSE + NASDAQ"}</span><span className="neutral-label">{usMarket ? "수신" : "미수신"}</span></div>
+              <div className="market-foot"><span>{usMarket?.breadth_scope ?? "NYSE + NASDAQ"}</span><span className="neutral-label">{usMarket ? "수신" : usMarketStatus.includes("수집 중") ? "수집 중" : "미수신"}</span></div>
             </article>
             <article className="market-card">
               <div className="card-top"><span>US TRADING VALUE</span><BarChart3 size={16} /></div>
               <div className="market-value">{formatUsdTradingValue(usMarket?.trading_value)}</div>
-              <div className="market-foot"><span>NYSE + NASDAQ 거래대금</span><span className="neutral-label">{usMarket ? "수신" : "미수신"}</span></div>
+              <div className="market-foot"><span>NYSE + NASDAQ 거래대금 · {usMarketStatus}</span><span className="neutral-label">{usMarket ? "수신" : usMarketStatus.includes("수집 중") ? "수집 중" : "미수신"}</span></div>
             </article>
           </section>
 
@@ -1020,8 +1020,8 @@ function App() {
                 <div className={index && index.change_pct > 0 ? "index-change positive" : index && index.change_pct < 0 ? "index-change negative" : "index-change neutral"}>{index ? (index.change > 0 ? "+" : "") + index.change.toFixed(2) + " (" + (index.change_pct > 0 ? "+" : "") + index.change_pct.toFixed(2) + "%)" : "지수 데이터 미수신"}</div>
                 <div className="market-foot"><span>{index?.date ?? "미수신"}</span><span className="neutral-label">{index ? "수신" : "미수신"}</span></div>
               </article>)}
-              <article className="market-card accent-card"><div className="card-top"><span>미국 시장 breadth</span><Activity size={16}/></div><div className="market-value">{formatCount(usMarket?.advancers)} <small>/ {formatCount(usMarket?.decliners)}</small></div><div className="market-foot"><span>{usMarket?.breadth_scope ?? "NYSE + NASDAQ"}</span><span className="neutral-label">{usMarket ? "수신" : "미수신"}</span></div></article>
-              <article className="market-card"><div className="card-top"><span>미국 총 거래대금</span><BarChart3 size={16}/></div><div className="market-value">{formatUsdTradingValue(usMarket?.trading_value)}</div><div className="market-foot"><span>NYSE + NASDAQ · USD</span><span className="neutral-label">{usMarket ? "수신" : "미수신"}</span></div></article>
+              <article className="market-card accent-card"><div className="card-top"><span>미국 시장 breadth</span><Activity size={16}/></div><div className="market-value">{formatCount(usMarket?.advancers)} <small>/ {formatCount(usMarket?.decliners)}</small></div><div className="market-foot"><span>{usMarket?.breadth_scope ?? "NYSE + NASDAQ"} · {usMarket ? "커버리지 " + usMarket.coverage_pct + "%" : usMarketStatus}</span><span className="neutral-label">{usMarket ? "수신" : usMarketStatus.includes("수집 중") ? "수집 중" : "미수신"}</span></div></article>
+              <article className="market-card"><div className="card-top"><span>미국 총 거래대금</span><BarChart3 size={16}/></div><div className="market-value">{formatUsdTradingValue(usMarket?.trading_value)}</div><div className="market-foot"><span>NYSE + NASDAQ · USD · {usMarketStatus}</span><span className="neutral-label">{usMarket ? "수신" : usMarketStatus.includes("수집 중") ? "수집 중" : "미수신"}</span></div></article>
             </div>
             <article className="panel market-ai-brief">
               <div className="section-heading compact"><div><span className="section-kicker">AI MARKET INTERPRETATION</span><h2>너구리의 시장 종합 의견</h2></div><span className="single-agent">{raccoonNote.status === "ready" ? "AI ANALYSIS READY" : raccoonNote.status === "loading" ? "ANALYZING" : "ANALYSIS UNAVAILABLE"}</span></div>
