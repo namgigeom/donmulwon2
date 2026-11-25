@@ -191,7 +191,7 @@ class DonmulwonAnalyzer:
                 from .us_market_scanner import scan_us_market
                 return DataResult(True, scan_us_market(progress=progress, limit=limit), "미국장 검색 완료")
             date = self.provider.latest_trading_date()
-            markets = ("KOSPI", "KOSDAQ") if market.upper() == "ALL" else (market.upper(),)
+            markets = ("KOSPI", "KOSDAQ") if market.upper() in {"KR", "ALL"} else (market.upper(),)
             ticker_names: dict[str, str] = {}
             for selected_market in markets:
                 listed = stock.get_market_ticker_list(date, market=selected_market)
