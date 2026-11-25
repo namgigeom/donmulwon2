@@ -49,7 +49,7 @@ type MarketBulletin = {
   universe_count?: number; coverage_pct?: number; error_count?: number; source?: string;
 };
 
-type MarketCode = "ALL" | "KOSPI" | "KOSDAQ" | "US";
+type MarketCode = "KR" | "KOSPI" | "KOSDAQ" | "US";
 type Candle = {
   date: string;
   "시가": number | null; "고가": number | null; "저가": number | null; "종가": number | null;
@@ -447,7 +447,7 @@ function App() {
   const [marketData, setMarketData] = useState<Partial<Record<MarketCode, MarketBulletin>>>({});
   const [usMarketStatus, setUsMarketStatus] = useState("미국장 데이터 조회 대기");
   const [raccoonNote, setRaccoonNote] = useState<{status:"loading"|"ready"|"error";trading_date?:string;note?:string;model?:string;error?:string}>({status:"loading"});
-  const [scanMarket, setScanMarket] = useState<MarketCode>("ALL");
+  const [scanMarket, setScanMarket] = useState<MarketCode>("KR");
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
@@ -875,9 +875,7 @@ function App() {
             <p className="scanner-intro">{scanMarket === "US" ? "NYSE·NASDAQ 보통주 대상. 직전 정규장 확정 일봉으로 기존 5개 발굴 조건을 검사하고, 당일 거래대금 5억 원 및 20거래일 평균 거래대금 20억 원 필터를 추가 적용합니다. A/B/C 등급과 MA240 감점은 기존 규칙을 따릅니다." : "일봉 필수 조건과 주봉 종가의 주봉 MA10 상회 조건을 모두 통과한 종목만 표시합니다. 통과 종목은 주봉 추세 점수로 A·B·C 등급화하고 MA240 상태는 별도 감점합니다."}</p>
             <div className="scanner-toolbar">
               <div className="period-toggle">
-                <button type="button" className={scanMarket === "ALL" ? "selected" : ""} onClick={() => setScanMarket("ALL")}>전체 시장</button>
-                <button type="button" className={scanMarket === "KOSPI" ? "selected" : ""} onClick={() => setScanMarket("KOSPI")}>코스피</button>
-                <button type="button" className={scanMarket === "KOSDAQ" ? "selected" : ""} onClick={() => setScanMarket("KOSDAQ")}>코스닥</button>
+                <button type="button" className={scanMarket === "KR" ? "selected" : ""} onClick={() => setScanMarket("KR")}>한국장</button>
                 <button type="button" className={scanMarket === "US" ? "selected" : ""} onClick={() => setScanMarket("US")}>미국장</button>
               </div>
               <button className="ticker-submit scan-submit" type="button" onClick={runMarketScan} disabled={scanLoading}>{scanLoading ? "전 종목 분석 중…" : "전체 종목 검색 시작"}</button>
